@@ -1,68 +1,97 @@
 import type { Income } from "@/types/income"
+import { prisma } from "./db"
+import type { Transaction } from "../lib/generated/prisma/index"
 
-// Local storage key for income
-const INCOME_STORAGE_KEY = "budget-tracker-income"
-
-// Get all income entries from local storage
+// Get all income entries from database
 export async function getIncome(): Promise<Income[]> {
-  if (typeof window === "undefined") {
-    return []
-  }
-
   try {
-    const storedIncome = localStorage.getItem(INCOME_STORAGE_KEY)
-    return storedIncome ? JSON.parse(storedIncome) : []
+    const incomeEntries = await prisma.transaction.findMany({
+      where: {
+        type: "INCOME"
+      },
+      orderBy: {
+        date: 'asc'
+      }
+    })
+
+    return incomeEntries.map((income: Transaction) => ({
+      id: income.id,
+      name: income.name,
+      amount: income.amount,
+      category: income.category,
+      frequency: income.frequency.toLowerCase(),
+      receiveDate: income.date.toISOString(),
+      emoji: income.emoji,
+      createdAt: income.createdAt.toISOString()
+    }))
   } catch (error) {
-    console.error("Failed to get income from local storage:", error)
+    console.error("Failed to get income from database:", error)
     return []
   }
 }
 
-// Add new income entry
+// Add new income entry to database
 export async function addIncome(income: Income): Promise<void> {
-  if (typeof window === "undefined") {
-    return
-  }
-
   try {
-    const currentIncome = await getIncome()
-    const updatedIncome = [...currentIncome, income]
-    localStorage.setItem(INCOME_STORAGE_KEY, JSON.stringify(updatedIncome))
+    await prisma.transaction.create({
+      data: {
+        id: income.id,
+        type: "INCOME",
+        name: income.name,
+        amount: income.amount,
+        category: income.category,
+        frequency: income.frequency.toUpperCase(),
+        date: new Date(income.receiveDate),
+        emoji: income.emoji,
+        createdAt: new Date(income.createdAt)
+      }
+    })
     window.dispatchEvent(new CustomEvent("incomeUpdated"))
   } catch (error) {
-    console.error("Failed to add income to local storage:", error)
+    console.error("Failed to add income to database:", error)
     throw error
   }
 }
 
-// Delete income entry
+// Delete income entry from database
 export async function deleteIncome(id: string): Promise<void> {
-  if (typeof window === "undefined") {
-    return
-  }
-
   try {
-    const currentIncome = await getIncome()
-    const updatedIncome = currentIncome.filter((income) => income.id !== id)
-    localStorage.setItem(INCOME_STORAGE_KEY, JSON.stringify(updatedIncome))
+    await prisma.transaction.delete({
+      where: {
+        id: id
+      }
+    })
     window.dispatchEvent(new CustomEvent("incomeUpdated"))
   } catch (error) {
-    console.error("Failed to delete income from local storage:", error)
+    console.error("Failed to delete income from database:", error)
     throw error
   }
 }
 
-// Get income by ID
+// Get income by ID from database
 export async function getIncomeById(id: string): Promise<Income | undefined> {
-  if (typeof window === "undefined") {
-    return undefined
-  }
-
   try {
-    const income = await getIncome()
-    return income.find((inc) => inc.id === id)
+    const income = await prisma.transaction.findUnique({
+      where: {
+        id: id,
+        type: "INCOME"
+      }
+    })
+
+    if (!income) return undefined
+
+    return {
+      id: income.id,
+      name: income.name,
+      amount: income.amount,
+      category: income.category,
+      frequency: income.frequency.toLowerCase(),
+      receiveDate: income.date.toISOString(),
+      emoji: income.emoji,
+      createdAt: income.createdAt.toISOString()
+    }
   } catch (error) {
-    console.error("Failed to get income by ID from local storage:", error)
+    console.error("Failed to get income by ID from database:", error)
     return undefined
   }
 } 

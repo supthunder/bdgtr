@@ -1,0 +1,45 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = "postgresql://user:password@localhost:5432/planner_db?schema=public"
+}
+
+enum TransactionType {
+  INCOME
+  EXPENSE
+}
+
+enum FrequencyType {
+  ONE_TIME
+  DAILY
+  WEEKLY
+  MONTHLY
+  YEARLY
+}
+
+model Transaction {
+  id        String         @id @default(cuid())
+  type      TransactionType
+  name      String
+  amount    Float
+  category  String
+  frequency FrequencyType
+  date      DateTime       // Due date for expenses, receive date for income
+  emoji     String        @default("💰")
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  @@index([type])
+  @@index([category])
+  @@index([date])
+}
