@@ -18,16 +18,23 @@ import { addExpense } from "@/lib/expenses"
 import { cn } from "@/lib/utils"
 
 const categories = [
-  { label: "🏠 Housing", value: "housing" },
+  { label: "🏠 Rent/Mortgage", value: "housing" },
   { label: "🔌 Utilities", value: "utilities" },
-  { label: "🌐 Internet", value: "internet" },
-  { label: "📱 Phone", value: "phone" },
-  { label: "🚗 Transportation", value: "transportation" },
-  { label: "🍔 Food", value: "food" },
-  { label: "🎭 Entertainment", value: "entertainment" },
-  { label: "💊 Healthcare", value: "healthcare" },
-  { label: "🛒 Shopping", value: "shopping" },
-  { label: "💰 Other", value: "other" },
+  { label: "🌐 Internet/Cable", value: "internet" },
+  { label: "🪑 Furniture", value: "furniture" },
+  { label: "🛋️ Home Decor", value: "decor" },
+  { label: "🧰 Appliances", value: "appliances" },
+  { label: "🧹 Cleaning Supplies", value: "cleaning" },
+  { label: "🛠️ Home Maintenance", value: "maintenance" },
+  { label: "🏡 Home Insurance", value: "insurance" },
+  { label: "🚰 Plumbing", value: "plumbing" },
+  { label: "⚡ Electrical", value: "electrical" },
+  { label: "❄️ HVAC", value: "hvac" },
+  { label: "🏺 Kitchen Items", value: "kitchen" },
+  { label: "🛁 Bathroom Items", value: "bathroom" },
+  { label: "🌿 Landscaping", value: "landscaping" },
+  { label: "📦 Storage/Moving", value: "storage" },
+  { label: "💰 Other Housing", value: "other" }
 ]
 
 const formSchema = z.object({
