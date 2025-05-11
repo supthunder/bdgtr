@@ -17,9 +17,30 @@ A modern, privacy-focused budget tracking application built with Next.js and sha
 ### 💳 Expense Tracking
 - Add and manage expenses with:
   - 📝 Name and amount
-  - 🏷️ Category with emoji (e.g., "🏠 Housing", "🔌 Utilities")
+  - 🏷️ Category with emoji (e.g., "🏠 Rent/Mortgage", "🪑 Furniture")
   - 🔄 Frequency options (one-time, daily, weekly, monthly, etc.)
   - 📅 Due date tracking
+
+### 📈 Reports & Analytics
+- **Detailed Reports View**
+  - Tabular view of all expenses
+  - Sort by amount, date, or category
+  - Search across all fields
+- **Export Options**
+  - Export to CSV for spreadsheet analysis
+  - Generate PDF reports with formatting
+  - Include category emojis in exports
+
+### 🏠 House-Related Categories
+- Specialized categories for home expenses:
+  - 🏠 Rent/Mortgage
+  - 🔌 Utilities
+  - 🪑 Furniture
+  - 🛋️ Home Decor
+  - 🧰 Appliances
+  - 🧹 Cleaning Supplies
+  - 🛠️ Home Maintenance
+  - And more...
 
 ### 🔒 Privacy-First
 - **100% Local Storage**: All data stays in your browser
@@ -40,6 +61,7 @@ A modern, privacy-focused budget tracking application built with Next.js and sha
 - **State Management**: React Hooks
 - **Data Storage**: Browser Local Storage
 - **Type Safety**: TypeScript
+- **Export Formats**: CSV, PDF (using jsPDF)
 
 ## 🚀 Getting Started
 
@@ -75,11 +97,11 @@ pnpm dev
    - Track upcoming payments
    - Monitor recurring expenses
 
-3. **Managing Expenses**
-   - Edit existing expenses
-   - Delete unwanted entries
-   - Filter by categories
-   - Sort by date or amount
+3. **Generating Reports**
+   - Navigate to Reports page
+   - Use search and filters to find specific expenses
+   - Sort data by clicking column headers
+   - Export filtered data to CSV or PDF
 
 ## 🔐 Data Privacy
 
