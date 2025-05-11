@@ -2,6 +2,9 @@
 
 A modern, privacy-focused budget tracking application built with Next.js and shadcn/ui. Track your living expenses with a beautiful dark-themed dashboard, all while keeping your data local and secure.
 
+![bdgtr Preview](/preview.png)
+*Dark-themed dashboard for tracking house-related expenses*
+
 ## 🌟 Key Features
 
 ### 📊 Dashboard Overview
