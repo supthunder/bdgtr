@@ -11,65 +11,104 @@ import {
 } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import { FileDown, Filter } from "lucide-react"
+import { ArrowUpDown, FileDown } from "lucide-react"
 import { format, parseISO } from "date-fns"
 import { getExpenses } from "@/lib/expenses"
-import { Expense } from "@/types/expense"
+import { getIncome } from "@/lib/income"
+import type { Expense } from "@/types/expense"
+import type { Income } from "@/types/income"
+import { Badge } from "@/components/ui/badge"
 import jsPDF from "jspdf"
 import autoTable from "jspdf-autotable"
+import { cn } from "@/lib/utils"
+
+type Transaction = {
+  id: string
+  name: string
+  amount: number
+  category: string
+  frequency: string
+  date: string
+  createdAt: string
+  emoji: string
+  type: "income" | "expense"
+}
 
 export default function ReportsPage() {
-  const [expenses, setExpenses] = useState<Expense[]>([])
+  const [transactions, setTransactions] = useState<Transaction[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [sortConfig, setSortConfig] = useState<{
-    key: keyof Expense;
-    direction: "asc" | "desc";
+    key: keyof Transaction
+    direction: "asc" | "desc"
   } | null>(null)
 
   useEffect(() => {
-    const loadExpenses = async () => {
-      const data = await getExpenses()
-      setExpenses(data)
+    const loadData = async () => {
+      const [expenseData, incomeData] = await Promise.all([
+        getExpenses(),
+        getIncome()
+      ])
+
+      const formattedExpenses: Transaction[] = expenseData.map((expense: Expense) => ({
+        id: expense.id,
+        name: expense.name,
+        amount: -Math.abs(expense.amount), // Make expenses negative
+        category: expense.category,
+        frequency: expense.frequency,
+        date: expense.dueDate,
+        createdAt: expense.createdAt,
+        emoji: expense.emoji,
+        type: "expense"
+      }))
+
+      const formattedIncome: Transaction[] = incomeData.map((income: Income) => ({
+        id: income.id,
+        name: income.name,
+        amount: income.amount,
+        category: income.category,
+        frequency: income.frequency,
+        date: income.receiveDate,
+        createdAt: income.createdAt,
+        emoji: income.emoji,
+        type: "income"
+      }))
+
+      setTransactions([...formattedExpenses, ...formattedIncome])
     }
-    loadExpenses()
+    loadData()
   }, [])
 
-  // Filter expenses based on search term
-  const filteredExpenses = expenses.filter((expense: Expense) => {
+  // Filter transactions based on search term
+  const filteredTransactions = transactions.filter((transaction) => {
     const searchLower = searchTerm.toLowerCase()
     return (
-      expense.name.toLowerCase().includes(searchLower) ||
-      expense.category.toLowerCase().includes(searchLower) ||
-      expense.amount.toString().includes(searchLower) ||
-      expense.frequency.toLowerCase().includes(searchLower)
+      transaction.name.toLowerCase().includes(searchLower) ||
+      transaction.category.toLowerCase().includes(searchLower) ||
+      Math.abs(transaction.amount).toString().includes(searchLower) ||
+      transaction.frequency.toLowerCase().includes(searchLower)
     )
   })
 
-  // Sort expenses based on column
-  const sortedExpenses = [...filteredExpenses].sort((a: Expense, b: Expense) => {
+  // Sort transactions based on column
+  const sortedTransactions = [...filteredTransactions].sort((a, b) => {
     if (!sortConfig) return 0
 
     const aValue = a[sortConfig.key]
     const bValue = b[sortConfig.key]
 
-    if (typeof aValue === "string" && typeof bValue === "string") {
+    if (sortConfig.key === "name" || sortConfig.key === "category" || sortConfig.key === "frequency") {
       return sortConfig.direction === "asc"
-        ? aValue.localeCompare(bValue)
-        : bValue.localeCompare(aValue)
+        ? String(aValue).localeCompare(String(bValue))
+        : String(bValue).localeCompare(String(aValue))
     }
 
-    if (typeof aValue === "number" && typeof bValue === "number") {
-      return sortConfig.direction === "asc" ? aValue - bValue : bValue - aValue
+    if (sortConfig.key === "amount") {
+      return sortConfig.direction === "asc"
+        ? Math.abs(a.amount) - Math.abs(b.amount)
+        : Math.abs(b.amount) - Math.abs(a.amount)
     }
 
-    // Handle date strings
-    if (sortConfig.key === "dueDate" || sortConfig.key === "createdAt") {
+    if (sortConfig.key === "date" || sortConfig.key === "createdAt") {
       const aDate = parseISO(aValue as string)
       const bDate = parseISO(bValue as string)
       return sortConfig.direction === "asc"
@@ -81,24 +120,24 @@ export default function ReportsPage() {
   })
 
   // Handle column sort
-  const handleSort = (key: keyof Expense) => {
+  const handleSort = (key: keyof Transaction) => {
     setSortConfig((current) => ({
       key,
-      direction:
-        current?.key === key && current?.direction === "asc" ? "desc" : "asc",
+      direction: current?.key === key && current?.direction === "asc" ? "desc" : "asc",
     }))
   }
 
   // Export to Excel (CSV)
   const exportToExcel = () => {
-    const headers = ["Name", "Amount", "Category", "Frequency", "Due Date", "Created At"]
-    const data = sortedExpenses.map((expense) => [
-      expense.name,
-      expense.amount,
-      `${expense.emoji} ${expense.category}`,
-      expense.frequency,
-      format(new Date(expense.dueDate), "PPP"),
-      format(new Date(expense.createdAt), "PPP"),
+    const headers = ["Name", "Amount", "Category", "Frequency", "Date", "Created At", "Type"]
+    const data = sortedTransactions.map((transaction) => [
+      transaction.name,
+      transaction.amount,
+      `${transaction.emoji} ${transaction.category}`,
+      transaction.frequency,
+      format(new Date(transaction.date), "PPP"),
+      format(new Date(transaction.createdAt), "PPP"),
+      transaction.type
     ])
 
     const csvContent = [
@@ -110,7 +149,7 @@ export default function ReportsPage() {
     const link = document.createElement("a")
     const url = URL.createObjectURL(blob)
     link.setAttribute("href", url)
-    link.setAttribute("download", `expenses-${format(new Date(), "yyyy-MM-dd")}.csv`)
+    link.setAttribute("download", `transactions-${format(new Date(), "yyyy-MM-dd")}.csv`)
     link.style.visibility = "hidden"
     document.body.appendChild(link)
     link.click()
@@ -123,19 +162,20 @@ export default function ReportsPage() {
     
     // Add title
     doc.setFontSize(16)
-    doc.text("Expense Report", 14, 15)
+    doc.text("Transaction Report", 14, 15)
     doc.setFontSize(10)
     doc.text(`Generated on ${format(new Date(), "PPP")}`, 14, 22)
 
     // Prepare data for table
-    const headers = [["Name", "Amount", "Category", "Frequency", "Due Date", "Created At"]]
-    const data = sortedExpenses.map((expense) => [
-      expense.name,
-      `$${expense.amount.toFixed(2)}`,
-      `${expense.emoji} ${expense.category}`,
-      expense.frequency,
-      format(new Date(expense.dueDate), "PPP"),
-      format(new Date(expense.createdAt), "PPP"),
+    const headers = [["Name", "Amount", "Category", "Frequency", "Date", "Created At", "Type"]]
+    const data = sortedTransactions.map((transaction) => [
+      transaction.name,
+      `${transaction.amount >= 0 ? "+" : "-"}$${Math.abs(transaction.amount).toFixed(2)}`,
+      `${transaction.emoji} ${transaction.category}`,
+      transaction.frequency,
+      format(new Date(transaction.date), "PPP"),
+      format(new Date(transaction.createdAt), "PPP"),
+      transaction.type
     ])
 
     // Add table
@@ -149,7 +189,21 @@ export default function ReportsPage() {
     })
 
     // Save PDF
-    doc.save(`expenses-report-${format(new Date(), "yyyy-MM-dd")}.pdf`)
+    doc.save(`transactions-report-${format(new Date(), "yyyy-MM-dd")}.pdf`)
+  }
+
+  const getSortIcon = (key: keyof Transaction) => {
+    if (sortConfig?.key !== key) {
+      return <ArrowUpDown className="ml-2 h-4 w-4" />
+    }
+    return (
+      <ArrowUpDown 
+        className={cn(
+          "ml-2 h-4 w-4",
+          sortConfig.direction === "asc" ? "text-green-500" : "text-red-500"
+        )}
+      />
+    )
   }
 
   return (
@@ -157,29 +211,11 @@ export default function ReportsPage() {
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-4">
           <Input
-            placeholder="Search expenses..."
+            placeholder="Search transactions..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-[300px]"
           />
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="icon">
-                <Filter className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => handleSort("amount")}>
-                Sort by Amount
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleSort("dueDate")}>
-                Sort by Due Date
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleSort("category")}>
-                Sort by Category
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
         </div>
         <div className="flex gap-2">
           <Button onClick={exportToExcel} variant="outline">
@@ -197,25 +233,46 @@ export default function ReportsPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Amount</TableHead>
-              <TableHead>Category</TableHead>
-              <TableHead>Frequency</TableHead>
-              <TableHead>Due Date</TableHead>
-              <TableHead>Created At</TableHead>
+              <TableHead onClick={() => handleSort("name")} className="cursor-pointer">
+                Name {getSortIcon("name")}
+              </TableHead>
+              <TableHead onClick={() => handleSort("category")} className="cursor-pointer">
+                Category {getSortIcon("category")}
+              </TableHead>
+              <TableHead onClick={() => handleSort("amount")} className="cursor-pointer">
+                Amount {getSortIcon("amount")}
+              </TableHead>
+              <TableHead onClick={() => handleSort("frequency")} className="cursor-pointer">
+                Frequency {getSortIcon("frequency")}
+              </TableHead>
+              <TableHead onClick={() => handleSort("date")} className="cursor-pointer">
+                Date {getSortIcon("date")}
+              </TableHead>
+              <TableHead onClick={() => handleSort("createdAt")} className="cursor-pointer">
+                Created {getSortIcon("createdAt")}
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {sortedExpenses.map((expense) => (
-              <TableRow key={expense.id}>
-                <TableCell>{expense.name}</TableCell>
-                <TableCell>${expense.amount.toFixed(2)}</TableCell>
-                <TableCell>
-                  {expense.emoji} {expense.category}
+            {sortedTransactions.map((transaction) => (
+              <TableRow key={transaction.id}>
+                <TableCell className="font-medium">
+                  <div className="flex items-center gap-2">
+                    <span>{transaction.emoji}</span>
+                    <span>{transaction.name}</span>
+                  </div>
                 </TableCell>
-                <TableCell className="capitalize">{expense.frequency}</TableCell>
-                <TableCell>{format(new Date(expense.dueDate), "PPP")}</TableCell>
-                <TableCell>{format(new Date(expense.createdAt), "PPP")}</TableCell>
+                <TableCell>{transaction.category}</TableCell>
+                <TableCell className={transaction.amount >= 0 ? "text-green-500" : "text-red-500"}>
+                  {transaction.amount >= 0 ? "+" : "-"}${Math.abs(transaction.amount).toFixed(2)}
+                </TableCell>
+                <TableCell>
+                  <Badge variant="outline" className="capitalize">
+                    {transaction.frequency}
+                  </Badge>
+                </TableCell>
+                <TableCell>{format(new Date(transaction.date), "MMM d, yyyy")}</TableCell>
+                <TableCell>{format(new Date(transaction.createdAt), "MMM d, yyyy")}</TableCell>
               </TableRow>
             ))}
           </TableBody>

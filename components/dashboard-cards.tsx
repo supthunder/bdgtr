@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { DollarSign, CreditCard, Calendar } from "lucide-react"
+import { DollarSign, Calendar } from "lucide-react"
 import { getExpenses } from "@/lib/expenses"
 import { getIncome } from "@/lib/income"
 import type { Expense } from "@/types/expense"
@@ -62,16 +62,6 @@ export function DashboardCards() {
 
   const netMonthly = monthlyIncome - monthlyExpenses
 
-  const upcomingExpenses = expenses
-    .filter((expense) => {
-      const dueDate = new Date(expense.dueDate)
-      const today = new Date()
-      const sevenDaysLater = new Date()
-      sevenDaysLater.setDate(today.getDate() + 7)
-      return dueDate >= today && dueDate <= sevenDaysLater
-    })
-    .reduce((sum, expense) => sum + expense.amount, 0)
-
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
       <Card>
@@ -106,18 +96,6 @@ export function DashboardCards() {
             {isLoading ? "Loading..." : `-$${monthlyExpenses.toFixed(2)}`}
           </div>
           <p className="text-xs text-muted-foreground">Your monthly recurring expenses</p>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Upcoming (7 days)</CardTitle>
-          <CreditCard className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold text-red-500">
-            {isLoading ? "Loading..." : `-$${upcomingExpenses.toFixed(2)}`}
-          </div>
-          <p className="text-xs text-muted-foreground">Due in the next 7 days</p>
         </CardContent>
       </Card>
     </div>
