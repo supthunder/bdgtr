@@ -6,6 +6,8 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { CalendarIcon, Check, ChevronsUpDown } from "lucide-react"
 import { format } from "date-fns"
+import type { Expense } from "@/types/expense"
+import { toast } from "@/components/ui/use-toast"
 
 import { Button } from "@/components/ui/button"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
@@ -14,7 +16,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command"
-import { addExpense } from "@/lib/expenses"
+import { addExpense, updateExpense } from "@/app/actions"
 import { cn } from "@/lib/utils"
 
 const categories = [
@@ -55,41 +57,60 @@ const formSchema = z.object({
   }),
 })
 
-export function ExpenseForm({ onSuccess }: { onSuccess?: () => void }) {
+interface ExpenseFormProps {
+  onSuccess?: (expense: Expense) => void
+  initialData?: Expense
+  isEditing?: boolean
+}
+
+export function ExpenseForm({ onSuccess, initialData, isEditing = false }: ExpenseFormProps) {
   const [open, setOpen] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: "",
-      amount: 0,
-      category: undefined,
-      frequency: undefined,
-      dueDate: new Date(),
+      name: initialData?.name || "",
+      amount: initialData?.amount || 0,
+      category: initialData?.category || undefined,
+      frequency: initialData?.frequency || undefined,
+      dueDate: initialData?.dueDate ? new Date(initialData.dueDate) : new Date(),
     },
   })
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
+    setIsSubmitting(true)
     try {
-      await addExpense({
-        id: Date.now().toString(),
+      const expenseData = {
+        id: initialData?.id || Date.now().toString(),
         name: values.name,
         amount: values.amount,
         category: values.category,
         frequency: values.frequency,
         dueDate: values.dueDate.toISOString(),
         emoji: categories.find((c) => c.value === values.category)?.label.split(" ")[0] || "💰",
-        createdAt: new Date().toISOString(),
-      })
-
-      form.reset()
-      // Call onSuccess if provided
-      if (onSuccess) {
-        onSuccess()
+        createdAt: initialData?.createdAt || new Date().toISOString(),
       }
-      console.log("Expense added successfully")
+
+      if (onSuccess) {
+        onSuccess(expenseData)
+      }
+
+      await (isEditing ? updateExpense(expenseData) : addExpense(expenseData))
+      form.reset()
+      toast({
+        title: "Success",
+        description: `Expense ${isEditing ? 'updated' : 'added'} successfully`,
+      })
     } catch (error) {
-      console.error("Failed to add expense:", error)
+      console.error(`Failed to ${isEditing ? 'update' : 'add'} expense:`, error)
+      toast({
+        title: "Error",
+        description: `Failed to ${isEditing ? 'update' : 'add'} expense. Please try again.`,
+        variant: "destructive",
+      })
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -198,13 +219,13 @@ export function ExpenseForm({ onSuccess }: { onSuccess?: () => void }) {
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="one-time">One-time</SelectItem>
-                  <SelectItem value="daily">Daily</SelectItem>
-                  <SelectItem value="weekly">Weekly</SelectItem>
-                  <SelectItem value="bi-weekly">Bi-weekly</SelectItem>
-                  <SelectItem value="monthly">Monthly</SelectItem>
-                  <SelectItem value="quarterly">Quarterly</SelectItem>
-                  <SelectItem value="yearly">Yearly</SelectItem>
+                  <SelectItem value="ONE_TIME">One-time</SelectItem>
+                  <SelectItem value="DAILY">Daily</SelectItem>
+                  <SelectItem value="WEEKLY">Weekly</SelectItem>
+                  <SelectItem value="BI_WEEKLY">Bi-weekly</SelectItem>
+                  <SelectItem value="MONTHLY">Monthly</SelectItem>
+                  <SelectItem value="QUARTERLY">Quarterly</SelectItem>
+                  <SelectItem value="YEARLY">Yearly</SelectItem>
                 </SelectContent>
               </Select>
               <FormMessage />
@@ -252,8 +273,15 @@ export function ExpenseForm({ onSuccess }: { onSuccess?: () => void }) {
             </FormItem>
           )}
         />
-        <Button type="submit" className="w-full">
-          Add Expense
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? (
+            <>
+              <span className="mr-2">{isEditing ? 'Updating...' : 'Adding...'}</span>
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+            </>
+          ) : (
+            isEditing ? "Update Expense" : "Add Expense"
+          )}
         </Button>
       </form>
     </Form>

@@ -23,7 +23,9 @@ enum FrequencyType {
   ONE_TIME
   DAILY
   WEEKLY
+  BI_WEEKLY
   MONTHLY
+  QUARTERLY
   YEARLY
 }
 

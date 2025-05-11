@@ -136,6 +136,37 @@ MIT License - feel free to use this project for personal or commercial purposes.
 
 A modern budget planning application built with Next.js, PostgreSQL, and Prisma.
 
+## 🎉 Recent Updates
+
+### Dashboard Improvements (Latest)
+- ✨ Added real-time updates for transactions
+- 📊 New Monthly Distribution chart showing income vs expenses
+- 💹 Enhanced Top Categories visualization with:
+  - Progress bars for budget tracking
+  - Emoji indicators for categories
+  - Budget limit indicators
+- 🔄 Optimistic updates for better UX
+- 🎯 Fixed issues with:
+  - Real-time data updates
+  - Form state management
+  - Duplicate buttons
+  - Static route handling
+
+### Visual Enhancements
+- 📈 New stacked bar chart showing monthly profit/loss
+- 🎨 Color-coded visualizations:
+  - Green for profit/income
+  - Red for expenses
+- 📱 Improved responsive layout
+- ✨ Added loading states and toast notifications
+
+### Technical Improvements
+- 🚀 Dynamic route handling with `dynamic = 'force-dynamic'`
+- 🔄 Proper path revalidation
+- 💾 Enhanced data fetching with proper date handling
+- 🎯 Optimized database queries
+- 🛠️ Improved error handling with rollback functionality
+
 ## Features
 
 - 💰 Track both income and expenses
@@ -155,6 +186,7 @@ A modern budget planning application built with Next.js, PostgreSQL, and Prisma.
 - **UI Components**: shadcn/ui
 - **Package Manager**: pnpm
 - **Language**: TypeScript
+- **Charts**: Recharts
 
 ## Prerequisites
 
@@ -210,10 +242,7 @@ DATABASE_URL="postgresql://user:password@localhost:5432/planner_db?schema=public
 5. **Initialize the database**
 
 ```bash
-# Generate Prisma Client
 pnpm prisma generate
-
-# Push the schema to the database
 pnpm prisma db push
 ```
 
@@ -223,43 +252,19 @@ pnpm prisma db push
 pnpm dev
 ```
 
-The application will be available at `http://localhost:3000`
+Open [http://localhost:3000](http://localhost:3000) to view the application.
 
-## Database Migration
+## Development Tools
 
-If you're migrating from the previous localStorage version to PostgreSQL:
-
-1. Make sure your PostgreSQL database is set up
-2. Run the application and visit any page
-3. The migration script will automatically transfer your existing data to PostgreSQL
-
-## Project Structure
-
-```
-├── app/                  # Next.js app directory
-├── components/          # React components
-├── lib/                # Utility functions and database client
-├── prisma/             # Prisma schema and migrations
-├── public/             # Static assets
-└── types/              # TypeScript type definitions
-```
-
-## Development
-
-- `pnpm dev` - Start development server
-- `pnpm build` - Build for production
-- `pnpm start` - Start production server
-- `pnpm lint` - Run ESLint
-- `pnpm type-check` - Run TypeScript compiler check
+- **Prisma Studio**: View and edit your data
+  ```bash
+  pnpm prisma studio
+  ```
 
 ## Contributing
 
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add some amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-## License
+## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details 
