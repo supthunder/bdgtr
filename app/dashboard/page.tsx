@@ -1,6 +1,7 @@
 import { ExpenseList } from "@/components/expense-list"
 import { DashboardHeader } from "@/components/dashboard-header"
 import { DashboardCards, TopCategories } from "@/components/dashboard-cards"
+import { IncomeList } from "@/components/income-list"
 
 export default function DashboardPage() {
   return (
@@ -9,6 +10,7 @@ export default function DashboardPage() {
       <DashboardCards />
       <TopCategories />
       <ExpenseList />
+      <IncomeList />
     </div>
   )
 }

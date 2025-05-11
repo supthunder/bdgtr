@@ -4,25 +4,33 @@ import { useEffect, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { DollarSign, CreditCard, Calendar } from "lucide-react"
 import { getExpenses } from "@/lib/expenses"
+import { getIncome } from "@/lib/income"
 import type { Expense } from "@/types/expense"
+import type { Income } from "@/types/income"
+import { cn } from "@/lib/utils"
 
 export function DashboardCards() {
   const [expenses, setExpenses] = useState<Expense[]>([])
+  const [income, setIncome] = useState<Income[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    const loadExpenses = async () => {
-      const data = await getExpenses()
-      setExpenses(data)
+    const loadData = async () => {
+      const [expenseData, incomeData] = await Promise.all([
+        getExpenses(),
+        getIncome()
+      ])
+      setExpenses(expenseData)
+      setIncome(incomeData)
       setIsLoading(false)
     }
 
-    loadExpenses()
+    loadData()
 
     // Add event listener for storage changes
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === "budget-tracker-expenses") {
-        loadExpenses()
+      if (e.key === "budget-tracker-expenses" || e.key === "budget-tracker-income") {
+        loadData()
       }
     }
 
@@ -30,14 +38,16 @@ export function DashboardCards() {
 
     // Custom event for local updates
     const handleCustomEvent = () => {
-      loadExpenses()
+      loadData()
     }
 
     window.addEventListener("expensesUpdated", handleCustomEvent)
+    window.addEventListener("incomeUpdated", handleCustomEvent)
 
     return () => {
       window.removeEventListener("storage", handleStorageChange)
       window.removeEventListener("expensesUpdated", handleCustomEvent)
+      window.removeEventListener("incomeUpdated", handleCustomEvent)
     }
   }, [])
 
@@ -45,6 +55,13 @@ export function DashboardCards() {
   const monthlyExpenses = expenses
     .filter((expense) => expense.frequency === "monthly")
     .reduce((sum, expense) => sum + expense.amount, 0)
+
+  const monthlyIncome = income
+    .filter((inc) => inc.frequency === "monthly")
+    .reduce((sum, inc) => sum + inc.amount, 0)
+
+  const netMonthly = monthlyIncome - monthlyExpenses
+
   const upcomingExpenses = expenses
     .filter((expense) => {
       const dueDate = new Date(expense.dueDate)
@@ -69,11 +86,25 @@ export function DashboardCards() {
       </Card>
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Net Monthly</CardTitle>
+          <DollarSign className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className={cn("text-2xl font-bold", netMonthly >= 0 ? "text-green-500" : "text-red-500")}>
+            {isLoading ? "Loading..." : `${netMonthly >= 0 ? "+" : "-"}$${Math.abs(netMonthly).toFixed(2)}`}
+          </div>
+          <p className="text-xs text-muted-foreground">Monthly income minus expenses</p>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Monthly Recurring</CardTitle>
           <Calendar className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{isLoading ? "Loading..." : `$${monthlyExpenses.toFixed(2)}`}</div>
+          <div className="text-2xl font-bold text-red-500">
+            {isLoading ? "Loading..." : `-$${monthlyExpenses.toFixed(2)}`}
+          </div>
           <p className="text-xs text-muted-foreground">Your monthly recurring expenses</p>
         </CardContent>
       </Card>
@@ -83,7 +114,9 @@ export function DashboardCards() {
           <CreditCard className="h-4 w-4 text-muted-foreground" />
         </CardHeader>
         <CardContent>
-          <div className="text-2xl font-bold">{isLoading ? "Loading..." : `$${upcomingExpenses.toFixed(2)}`}</div>
+          <div className="text-2xl font-bold text-red-500">
+            {isLoading ? "Loading..." : `-$${upcomingExpenses.toFixed(2)}`}
+          </div>
           <p className="text-xs text-muted-foreground">Due in the next 7 days</p>
         </CardContent>
       </Card>

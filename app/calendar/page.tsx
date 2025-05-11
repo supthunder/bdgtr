@@ -2,55 +2,33 @@
 
 import { useState, useEffect } from "react"
 import { Calendar } from "@/components/ui/calendar"
+import { Card, CardContent } from "@/components/ui/card"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Badge } from "@/components/ui/badge"
-import { format, isSameDay, addMonths, subMonths } from "date-fns"
 import { getExpenses } from "@/lib/expenses"
-import { Expense } from "@/types/expense"
-import { Button } from "@/components/ui/button"
-import { ChevronLeft, ChevronRight } from "lucide-react"
-
-function getRecurringExpensesForDate(date: Date, expenses: Expense[]) {
-  return expenses.filter((expense) => {
-    const expenseDate = new Date(expense.dueDate)
-    
-    switch (expense.frequency) {
-      case "daily":
-        return true
-      case "weekly":
-        return expenseDate.getDay() === date.getDay()
-      case "bi-weekly":
-        // Simplified bi-weekly check - just check if it's the same day of week
-        return expenseDate.getDay() === date.getDay()
-      case "monthly":
-        return expenseDate.getDate() === date.getDate()
-      case "quarterly":
-        return expenseDate.getDate() === date.getDate() && 
-               [0, 3, 6, 9].includes((date.getMonth() - expenseDate.getMonth() + 12) % 12)
-      case "yearly":
-        return expenseDate.getDate() === date.getDate() && 
-               expenseDate.getMonth() === date.getMonth()
-      case "one-time":
-        return isSameDay(expenseDate, date)
-      default:
-        return false
-    }
-  })
-}
+import { getIncome } from "@/lib/income"
+import { getRecurringExpensesForDate } from "@/lib/utils"
+import type { Expense } from "@/types/expense"
+import type { Income } from "@/types/income"
+import { format } from "date-fns"
 
 export default function CalendarPage() {
   const [expenses, setExpenses] = useState<Expense[]>([])
+  const [income, setIncome] = useState<Income[]>([])
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined)
   const [selectedDayExpenses, setSelectedDayExpenses] = useState<Expense[]>([])
+  const [selectedDayIncome, setSelectedDayIncome] = useState<Income[]>([])
   const [isDialogOpen, setIsDialogOpen] = useState(false)
-  const [currentMonth, setCurrentMonth] = useState(new Date())
 
   useEffect(() => {
-    const loadExpenses = async () => {
-      const data = await getExpenses()
-      setExpenses(data)
+    const loadData = async () => {
+      const [expenseData, incomeData] = await Promise.all([
+        getExpenses(),
+        getIncome()
+      ])
+      setExpenses(expenseData)
+      setIncome(incomeData)
     }
-    loadExpenses()
+    loadData()
   }, [])
 
   // Handle date selection
@@ -58,146 +36,120 @@ export default function CalendarPage() {
     if (date) {
       setSelectedDate(date)
       const dayExpenses = getRecurringExpensesForDate(date, expenses)
+      const dayIncome = getRecurringExpensesForDate(date, income)
       setSelectedDayExpenses(dayExpenses)
+      setSelectedDayIncome(dayIncome)
       setIsDialogOpen(true)
     }
   }
 
   // Calculate total amount for a date
-  const getTotalAmount = (expenses: Expense[]) => {
-    return expenses.reduce((total, expense) => total + expense.amount, 0)
+  const getTotalAmount = (expenses: Expense[], income: Income[]) => {
+    const expenseTotal = expenses.reduce((total, expense) => total + expense.amount, 0)
+    const incomeTotal = income.reduce((total, inc) => total + inc.amount, 0)
+    return incomeTotal - expenseTotal
   }
 
-  // Get expenses for date display
-  const getExpensesForDay = (date: Date) => {
-    return getRecurringExpensesForDate(date, expenses)
+  // Get expenses and income for date display
+  const getTransactionsForDay = (date: Date) => {
+    const dayExpenses = getRecurringExpensesForDate(date, expenses)
+    const dayIncome = getRecurringExpensesForDate(date, income)
+    return { expenses: dayExpenses, income: dayIncome }
   }
 
   // Custom day render to show expense indicators
   const renderDay = (day: Date) => {
-    const dayExpenses = getExpensesForDay(day)
-    if (dayExpenses.length === 0) return null
+    const { expenses: dayExpenses, income: dayIncome } = getTransactionsForDay(day)
+    if (dayExpenses.length === 0 && dayIncome.length === 0) return null
 
-    const total = getTotalAmount(dayExpenses)
+    const total = getTotalAmount(dayExpenses, dayIncome)
+    const isPositive = total >= 0
+
     return (
       <div className="flex flex-col items-center">
-        <div className="w-1 h-1 bg-primary rounded-full mb-1" />
-        <div className="text-[10px] text-muted-foreground">
-          ${total.toFixed(0)}
+        <div className={`w-1 h-1 rounded-full mb-1 ${isPositive ? "bg-green-500" : "bg-primary"}`} />
+        <div className={`text-[10px] ${isPositive ? "text-green-500" : "text-muted-foreground"}`}>
+          {isPositive ? "+" : "-"}${Math.abs(total).toFixed(0)}
         </div>
       </div>
     )
   }
 
   return (
-    <div className="container mx-auto py-10">
-      <div className="flex flex-col space-y-4">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-2xl font-bold">Payment Schedule</h2>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => setCurrentMonth(subMonths(currentMonth, 1))}
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => setCurrentMonth(addMonths(currentMonth, 1))}
-            >
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
+    <div>
+      <Card>
+        <CardContent className="pt-6">
+          <Calendar
+            mode="single"
+            selected={selectedDate}
+            onSelect={handleDateSelect}
+            className="rounded-md border"
+            components={{
+              DayContent: (props) => {
+                return (
+                  <div className="relative w-full h-full p-2">
+                    <div className="absolute top-0 right-0 left-0">
+                      {renderDay(props.date)}
+                    </div>
+                    <div className="mt-4">{props.date.getDate()}</div>
+                  </div>
+                )
+              },
+            }}
+          />
+        </CardContent>
+      </Card>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {/* Previous Month */}
-          <div className="border rounded-lg p-4">
-            <Calendar
-              mode="single"
-              selected={selectedDate}
-              onSelect={handleDateSelect}
-              month={subMonths(currentMonth, 1)}
-              components={{ DayContent: (props) => renderDay(props.date) }}
-              className="w-full"
-            />
-          </div>
-
-          {/* Current Month */}
-          <div className="border rounded-lg p-4">
-            <Calendar
-              mode="single"
-              selected={selectedDate}
-              onSelect={handleDateSelect}
-              month={currentMonth}
-              components={{ DayContent: (props) => renderDay(props.date) }}
-              className="w-full"
-            />
-          </div>
-
-          {/* Next Month */}
-          <div className="border rounded-lg p-4">
-            <Calendar
-              mode="single"
-              selected={selectedDate}
-              onSelect={handleDateSelect}
-              month={addMonths(currentMonth, 1)}
-              components={{ DayContent: (props) => renderDay(props.date) }}
-              className="w-full"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* Expense Details Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              Expenses for {selectedDate ? format(selectedDate, "MMMM d, yyyy") : ""}
+              {selectedDate ? format(selectedDate, "MMMM d, yyyy") : ""}
             </DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 mt-4">
-            {selectedDayExpenses.map((expense) => (
-              <div
-                key={expense.id}
-                className="flex items-center justify-between border-b pb-4 last:border-0"
-              >
-                <div>
-                  <div className="font-medium text-lg">
-                    {expense.emoji} {expense.name}
+          <div className="space-y-4">
+            {selectedDayIncome.length > 0 && (
+              <div>
+                <h3 className="font-medium mb-2">Income</h3>
+                {selectedDayIncome.map((inc) => (
+                  <div key={inc.id} className="flex justify-between items-center py-1">
+                    <div className="flex items-center gap-2">
+                      <span>{inc.emoji}</span>
+                      <span>{inc.name}</span>
+                    </div>
+                    <span className="text-green-500">+${inc.amount.toFixed(2)}</span>
                   </div>
-                  <div className="flex items-center gap-2 mt-1">
-                    <Badge variant="outline">
-                      {expense.frequency}
-                    </Badge>
-                    <span className="text-sm text-muted-foreground">
-                      Due: {format(new Date(expense.dueDate), "MMM d, yyyy")}
-                    </span>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <div className="font-medium text-lg">
-                    ${expense.amount.toFixed(2)}
-                  </div>
-                </div>
+                ))}
               </div>
-            ))}
+            )}
             {selectedDayExpenses.length > 0 && (
+              <div>
+                <h3 className="font-medium mb-2">Expenses</h3>
+                {selectedDayExpenses.map((expense) => (
+                  <div key={expense.id} className="flex justify-between items-center py-1">
+                    <div className="flex items-center gap-2">
+                      <span>{expense.emoji}</span>
+                      <span>{expense.name}</span>
+                    </div>
+                    <span className="text-red-500">-${expense.amount.toFixed(2)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            {(selectedDayExpenses.length > 0 || selectedDayIncome.length > 0) && (
               <div className="pt-4 border-t">
                 <div className="flex justify-between items-center">
-                  <span className="font-semibold">Total</span>
-                  <span className="font-semibold">
-                    ${getTotalAmount(selectedDayExpenses).toFixed(2)}
+                  <span className="font-semibold">Net Total</span>
+                  <span className={`font-semibold ${getTotalAmount(selectedDayExpenses, selectedDayIncome) >= 0 ? "text-green-500" : "text-red-500"}`}>
+                    {getTotalAmount(selectedDayExpenses, selectedDayIncome) >= 0 ? "+" : "-"}$
+                    {Math.abs(getTotalAmount(selectedDayExpenses, selectedDayIncome)).toFixed(2)}
                   </span>
                 </div>
               </div>
             )}
-            {selectedDayExpenses.length === 0 && (
+            {selectedDayExpenses.length === 0 && selectedDayIncome.length === 0 && (
               <div className="text-center text-muted-foreground py-8">
-                No expenses due on this date
+                No transactions on this date
               </div>
             )}
           </div>
