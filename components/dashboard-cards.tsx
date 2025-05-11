@@ -90,3 +90,107 @@ export function DashboardCards() {
     </div>
   )
 }
+
+export function TopCategories() {
+  const [expenses, setExpenses] = useState<Expense[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  useEffect(() => {
+    const loadExpenses = async () => {
+      const data = await getExpenses()
+      setExpenses(data)
+      setIsLoading(false)
+    }
+    loadExpenses()
+
+    const handleCustomEvent = () => {
+      loadExpenses()
+    }
+    window.addEventListener("expensesUpdated", handleCustomEvent)
+    return () => {
+      window.removeEventListener("expensesUpdated", handleCustomEvent)
+    }
+  }, [])
+
+  // Group expenses by category and calculate totals
+  const categoryTotals = expenses.reduce((acc: Record<string, { total: number, count: number }>, expense) => {
+    const key = expense.category
+    if (!acc[key]) {
+      acc[key] = { total: 0, count: 0 }
+    }
+    acc[key].total += expense.amount
+    acc[key].count += 1
+    return acc
+  }, {})
+
+  // Convert to array and sort by total
+  const sortedCategories = Object.entries(categoryTotals)
+    .map(([category, data]) => ({
+      category,
+      ...data
+    }))
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 5) // Get top 5 categories
+
+  // Category colors and emojis mapping
+  const categoryInfo: Record<string, { emoji: string; color: string }> = {
+    "housing": { emoji: "🏠", color: "bg-green-500" },
+    "utilities": { emoji: "🔌", color: "bg-purple-500" },
+    "internet": { emoji: "🌐", color: "bg-blue-500" },
+    "furniture": { emoji: "🪑", color: "bg-red-500" },
+    "decor": { emoji: "🛋️", color: "bg-orange-500" },
+    "appliances": { emoji: "🧰", color: "bg-yellow-500" },
+    "cleaning": { emoji: "🧹", color: "bg-emerald-500" },
+    "maintenance": { emoji: "🛠️", color: "bg-cyan-500" },
+    "insurance": { emoji: "🏡", color: "bg-indigo-500" },
+    "plumbing": { emoji: "🚰", color: "bg-violet-500" },
+    "electrical": { emoji: "⚡", color: "bg-fuchsia-500" },
+    "hvac": { emoji: "❄️", color: "bg-rose-500" },
+    "kitchen": { emoji: "🏺", color: "bg-pink-500" },
+    "bathroom": { emoji: "🛁", color: "bg-sky-500" },
+    "landscaping": { emoji: "🌿", color: "bg-teal-500" },
+    "storage": { emoji: "📦", color: "bg-amber-500" },
+    "other": { emoji: "💰", color: "bg-gray-500" }
+  }
+
+  const maxAmount = sortedCategories[0]?.total || 0
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Top Categories</CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-4">
+          {sortedCategories.map(({ category, total }) => {
+            const info = categoryInfo[category] || { emoji: "💰", color: "bg-gray-500" }
+            const percentage = (total / maxAmount) * 100
+
+            return (
+              <div key={category} className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className={`w-2 h-2 rounded-full ${info.color}`} />
+                  <span>{info.emoji}</span>
+                  <span className="font-medium capitalize">{category.replace('-', ' ')}</span>
+                </div>
+                <div className="flex items-center gap-4">
+                  <span className="font-medium text-sm">
+                    ${total.toFixed(0)}
+                  </span>
+                  <div className="w-12 h-1.5 rounded-full bg-secondary">
+                    <div
+                      className={`h-full rounded-full ${info.color}`}
+                      style={{
+                        width: `${percentage}%`,
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}

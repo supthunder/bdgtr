@@ -11,7 +11,8 @@ A modern, privacy-focused budget tracking application built with Next.js and sha
 - Total expenses summary
 - Monthly recurring expenses tracker
 - Upcoming expenses (next 7 days)
-- Visual expense breakdown by category
+- Top spending categories with visual indicators
+- Recent expenses list
 - Dark theme by default for comfortable viewing
 
 ### 💳 Expense Tracking
@@ -35,12 +36,21 @@ A modern, privacy-focused budget tracking application built with Next.js and sha
 - Specialized categories for home expenses:
   - 🏠 Rent/Mortgage
   - 🔌 Utilities
+  - 🌐 Internet/Cable
   - 🪑 Furniture
   - 🛋️ Home Decor
   - 🧰 Appliances
   - 🧹 Cleaning Supplies
   - 🛠️ Home Maintenance
-  - And more...
+  - 🏡 Home Insurance
+  - 🚰 Plumbing
+  - ⚡ Electrical
+  - ❄️ HVAC
+  - 🏺 Kitchen Items
+  - 🛁 Bathroom Items
+  - 🌿 Landscaping
+  - 📦 Storage/Moving
+  - 💰 Other Housing
 
 ### 🔒 Privacy-First
 - **100% Local Storage**: All data stays in your browser
