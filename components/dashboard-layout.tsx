@@ -5,7 +5,7 @@ import type React from "react"
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Home, BarChart3, CreditCard, Settings, Calendar, DollarSign, Tags, Menu } from "lucide-react"
+import { Home, BarChart3, CreditCard, Settings, Calendar, DollarSign, Tags, Menu, LayoutDashboard, FileText } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
 import {
@@ -20,6 +20,24 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar"
 import { ModeToggle } from "@/components/mode-toggle"
+
+const sidebarNavItems = [
+  {
+    title: "Overview",
+    href: "/dashboard",
+    icon: <LayoutDashboard className="w-6 h-6" />,
+  },
+  {
+    title: "Reports",
+    href: "/reports",
+    icon: <FileText className="w-6 h-6" />,
+  },
+  {
+    title: "Calendar",
+    href: "/calendar",
+    icon: <Calendar className="w-6 h-6" />,
+  },
+]
 
 export function DashboardLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
@@ -49,32 +67,16 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
               <SidebarMenuItem>
                 <SidebarMenuButton asChild isActive={pathname === "/dashboard"}>
                   <Link href="/dashboard">
-                    <Home className="mr-2 h-4 w-4" />
+                    <LayoutDashboard className="mr-2 h-4 w-4" />
                     <span>Dashboard</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname === "/expenses"}>
-                  <Link href="/expenses">
-                    <CreditCard className="mr-2 h-4 w-4" />
-                    <span>Expenses</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
               <SidebarMenuItem>
                 <SidebarMenuButton asChild isActive={pathname === "/reports"}>
                   <Link href="/reports">
-                    <BarChart3 className="mr-2 h-4 w-4" />
+                    <FileText className="mr-2 h-4 w-4" />
                     <span>Reports</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={pathname === "/categories"}>
-                  <Link href="/categories">
-                    <Tags className="mr-2 h-4 w-4" />
-                    <span>Categories</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -126,18 +128,8 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                     asChild
                   >
                     <Link href="/dashboard">
-                      <Home className="mr-2 h-4 w-4" />
+                      <LayoutDashboard className="mr-2 h-4 w-4" />
                       Dashboard
-                    </Link>
-                  </Button>
-                  <Button
-                    variant={pathname === "/expenses" ? "secondary" : "ghost"}
-                    className="w-full justify-start"
-                    asChild
-                  >
-                    <Link href="/expenses">
-                      <CreditCard className="mr-2 h-4 w-4" />
-                      Expenses
                     </Link>
                   </Button>
                   <Button
@@ -146,18 +138,8 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
                     asChild
                   >
                     <Link href="/reports">
-                      <BarChart3 className="mr-2 h-4 w-4" />
+                      <FileText className="mr-2 h-4 w-4" />
                       Reports
-                    </Link>
-                  </Button>
-                  <Button
-                    variant={pathname === "/categories" ? "secondary" : "ghost"}
-                    className="w-full justify-start"
-                    asChild
-                  >
-                    <Link href="/categories">
-                      <Tags className="mr-2 h-4 w-4" />
-                      Categories
                     </Link>
                   </Button>
                   <Button
