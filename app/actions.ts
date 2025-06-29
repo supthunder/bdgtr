@@ -3,6 +3,7 @@
 import { prisma } from '@/lib/db'
 import type { Expense, ExpenseCreate } from '@/types/expense'
 import type { Income, IncomeCreate } from '@/types/income'
+import type { Shortcut, ShortcutCreate } from '@/types/shortcut'
 import { revalidatePath } from 'next/cache'
 import { FrequencyType } from '@/lib/generated/prisma'
 import fs from 'fs/promises'
@@ -561,5 +562,84 @@ export async function getBackupFiles(): Promise<{ csv: string[]; sql: string[] }
   } catch (error) {
     console.error('Failed to get backup files:', error)
     return { csv: [], sql: [] }
+  }
+}
+
+// ===== SHORTCUT MANAGEMENT =====
+
+export async function getShortcuts(): Promise<Shortcut[]> {
+  try {
+    const shortcuts = await prisma.shortcut.findMany({
+      orderBy: {
+        createdAt: 'asc'
+      }
+    })
+
+    return shortcuts.map((shortcut) => ({
+      id: shortcut.id,
+      name: shortcut.name,
+      url: shortcut.url,
+      category: shortcut.category,
+      emoji: shortcut.emoji,
+      createdAt: shortcut.createdAt.toISOString(),
+      updatedAt: shortcut.updatedAt.toISOString()
+    }))
+  } catch (error) {
+    console.error("Failed to get shortcuts from database:", error)
+    return []
+  }
+}
+
+export async function addShortcut(shortcut: ShortcutCreate): Promise<void> {
+  try {
+    await prisma.shortcut.create({
+      data: {
+        name: shortcut.name,
+        url: shortcut.url,
+        category: shortcut.category,
+        emoji: shortcut.emoji
+      }
+    })
+    revalidatePath('/', 'layout')
+    revalidatePath('/dashboard')
+  } catch (error) {
+    console.error("Failed to add shortcut to database:", error)
+    throw error
+  }
+}
+
+export async function deleteShortcut(id: string): Promise<void> {
+  try {
+    await prisma.shortcut.delete({
+      where: {
+        id: id
+      }
+    })
+    revalidatePath('/', 'layout')
+    revalidatePath('/dashboard')
+  } catch (error) {
+    console.error("Failed to delete shortcut from database:", error)
+    throw error
+  }
+}
+
+export async function updateShortcut(updatedShortcut: Shortcut): Promise<void> {
+  try {
+    await prisma.shortcut.update({
+      where: {
+        id: updatedShortcut.id
+      },
+      data: {
+        name: updatedShortcut.name,
+        url: updatedShortcut.url,
+        category: updatedShortcut.category,
+        emoji: updatedShortcut.emoji
+      }
+    })
+    revalidatePath('/', 'layout')
+    revalidatePath('/dashboard')
+  } catch (error) {
+    console.error("Failed to update shortcut in database:", error)
+    throw error
   }
 }

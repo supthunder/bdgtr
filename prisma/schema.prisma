@@ -45,3 +45,15 @@ model Transaction {
   @@index([category])
   @@index([date])
 }
+
+model Shortcut {
+  id        String   @id @default(cuid())
+  name      String
+  url       String
+  category  String
+  emoji     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([category])
+}

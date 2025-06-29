@@ -1,6 +1,7 @@
 "use client"
 
 import { BackupManager } from "@/components/backup-manager"
+import { ShortcutManager } from "@/components/shortcut-manager"
 
 export function DashboardHeader() {
   return (
@@ -10,6 +11,7 @@ export function DashboardHeader() {
         <p className="text-muted-foreground">Track and manage your monthly expenses</p>
       </div>
       <div className="flex items-center gap-2">
+        <ShortcutManager />
         <BackupManager />
       </div>
     </div>

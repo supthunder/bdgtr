@@ -84,10 +84,73 @@ export function ExpenseForm({ onSuccess, initialData, isEditing = false }: Expen
       // Remove extra whitespace and normalize
       const cleaned = text.trim()
       
-      // Split by tabs or multiple spaces
-      const parts = cleaned.split(/\t+|\s{2,}/).filter(part => part.trim())
+      let parsedData: { name?: string; amount?: number; date?: Date; category?: string; frequency?: string } = {}
       
-      let parsedData: { name?: string; amount?: number; date?: Date } = {}
+      // Check if this is a mortgage payment format
+      const isMortgageFormat = cleaned.includes('Monthly Payment Amount:') || 
+                              cleaned.includes('Actual Due Date:') || 
+                              cleaned.includes('Draft Frequency:') ||
+                              /is paid on the \d+(st|nd|rd|th) of the month/i.test(cleaned)
+      
+      if (isMortgageFormat) {
+        // Parse mortgage payment format
+        
+        // Extract amount - look for dollar amounts
+        const amountMatches = cleaned.match(/\$(\d{1,3}(?:,\d{3})*(?:\.\d{2})?)/g)
+        if (amountMatches && amountMatches.length > 0) {
+          const amount = parseFloat(amountMatches[0].replace('$', '').replace(/,/g, ''))
+          if (amount > 0) {
+            parsedData.amount = amount
+          }
+        }
+        
+        // Extract due date - look for "Actual Due Date:" or month names
+        const dueDateMatch = cleaned.match(/Actual Due Date:\s*([A-Za-z]+ \d{1,2}, \d{4})/i)
+        if (dueDateMatch) {
+          try {
+            parsedData.date = new Date(dueDateMatch[1])
+          } catch {
+            // Try other date formats if this fails
+          }
+        }
+        
+        // If no "Actual Due Date" found, look for month names in general
+        if (!parsedData.date) {
+          const monthMatch = cleaned.match(/([A-Za-z]+ \d{1,2}, \d{4})/i)
+          if (monthMatch) {
+            try {
+              parsedData.date = new Date(monthMatch[1])
+            } catch {
+              // Skip invalid dates
+            }
+          }
+        }
+        
+        // Extract frequency
+        const frequencyMatch = cleaned.match(/Draft Frequency:\s*(\w+)/i) || 
+                              cleaned.match(/Monthly Payment/i)
+        if (frequencyMatch) {
+          const freq = frequencyMatch[1]?.toLowerCase() || 'monthly'
+          if (freq.includes('month')) {
+            parsedData.frequency = 'MONTHLY'
+          } else if (freq.includes('week')) {
+            parsedData.frequency = 'WEEKLY'
+          } else if (freq.includes('year')) {
+            parsedData.frequency = 'YEARLY'
+          }
+        } else if (cleaned.toLowerCase().includes('monthly')) {
+          parsedData.frequency = 'MONTHLY'
+        }
+        
+        // Set mortgage-specific defaults
+        parsedData.name = 'Mortgage Payment'
+        parsedData.category = 'housing'
+        
+        return parsedData
+      }
+      
+      // Original bank statement format parsing
+      const parts = cleaned.split(/\t+|\s{2,}/).filter(part => part.trim())
       
       // Look for amount (contains $ or is a number with possible commas)
       const amountRegex = /^\$?(\d{1,3}(?:,\d{3})*(?:\.\d{2})?|\d+(?:\.\d{2})?)$/
@@ -180,9 +243,13 @@ export function ExpenseForm({ onSuccess, initialData, isEditing = false }: Expen
       if (parsed.date && !isNaN(parsed.date.getTime())) {
         form.setValue('dueDate', parsed.date)
       }
-      
-      // Set default frequency to one-time for pasted expenses
-      if (!form.getValues('frequency')) {
+      if (parsed.category) {
+        form.setValue('category', parsed.category)
+      }
+      if (parsed.frequency) {
+        form.setValue('frequency', parsed.frequency)
+      } else if (!form.getValues('frequency')) {
+        // Set default frequency to one-time for pasted expenses (only if no frequency was parsed)
         form.setValue('frequency', 'ONE_TIME')
       }
       
