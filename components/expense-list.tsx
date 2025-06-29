@@ -208,7 +208,7 @@ export function ExpenseList({ initialExpenses }: ExpenseListProps) {
                   <TableHead>Category</TableHead>
                   <TableHead>Amount</TableHead>
                   <TableHead>Frequency</TableHead>
-                  <TableHead>Due Date</TableHead>
+                  <TableHead>Date</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>

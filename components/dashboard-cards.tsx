@@ -1,8 +1,8 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { DollarSign, Calendar } from "lucide-react"
+import { DollarSign, Calendar, Home, Zap } from "lucide-react"
 import { getExpenses, getIncome } from "@/app/actions"
 import type { Expense } from "@/types/expense"
 import type { Income } from "@/types/income"
@@ -40,13 +40,36 @@ const categoryInfo: Record<string, { emoji: string; color: string }> = {
 }
 
 function prepareMonthlyData(expenses: Expense[], income: Income[]) {
-  // Get last 6 months
   const today = new Date()
-  const months = Array.from({ length: 6 }, (_, i) => {
-    const d = new Date(today)
-    d.setMonth(d.getMonth() - i)
-    return d
-  }).reverse()
+  const currentYear = today.getFullYear()
+  const currentMonth = today.getMonth()
+  
+  // Find earliest data point
+  const allDates = [
+    ...expenses.map(e => new Date(e.dueDate)),
+    ...income.map(i => new Date(i.receiveDate))
+  ]
+  
+  const earliestDate = allDates.length > 0 
+    ? new Date(Math.min(...allDates.map(d => d.getTime())))
+    : new Date(currentYear, 0, 1) // Fallback to January if no data
+  
+  const earliestYear = earliestDate.getFullYear()
+  const earliestMonth = earliestDate.getMonth()
+  
+  // Generate months from earliest data to December of current year
+  const months = []
+  let startYear = earliestYear
+  let startMonth = earliestMonth
+  
+  while (startYear < currentYear || (startYear === currentYear && startMonth <= 11)) {
+    months.push(new Date(startYear, startMonth, 1))
+    startMonth++
+    if (startMonth > 11) {
+      startMonth = 0
+      startYear++
+    }
+  }
 
   return months.map(date => {
     const monthStart = new Date(date.getFullYear(), date.getMonth(), 1)
@@ -72,6 +95,7 @@ function prepareMonthlyData(expenses: Expense[], income: Income[]) {
     return {
       date: date.toISOString(),
       expenses: monthlyExpenses,
+      income: monthlyIncome,
       profit: profit > 0 ? profit : 0,
       loss: profit < 0 ? Math.abs(profit) : 0
     }
@@ -83,9 +107,18 @@ export function DashboardCards({ expenses, income }: DashboardCardsProps) {
   const totalExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0)
   const totalIncome = income.reduce((sum, inc) => sum + inc.amount, 0)
   const balance = totalIncome - totalExpenses
+  
+  // Calculate category-specific totals
+  const mortgageExpenses = expenses
+    .filter(expense => expense.category === 'housing')
+    .reduce((sum, expense) => sum + expense.amount, 0)
+  
+  const utilitiesExpenses = expenses
+    .filter(expense => expense.category === 'utilities')
+    .reduce((sum, expense) => sum + expense.amount, 0)
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <CardTitle className="text-sm font-medium">Total Income</CardTitle>
@@ -118,12 +151,102 @@ export function DashboardCards({ expenses, income }: DashboardCardsProps) {
           </div>
         </CardContent>
       </Card>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Mortgage</CardTitle>
+          <Home className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold text-blue-500">-${mortgageExpenses.toFixed(2)}</div>
+        </CardContent>
+      </Card>
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">Utilities</CardTitle>
+          <Zap className="h-4 w-4 text-muted-foreground" />
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold text-orange-500">-${utilitiesExpenses.toFixed(2)}</div>
+        </CardContent>
+      </Card>
     </div>
   )
 }
 
 export function TopCategories({ expenses, income = [] }: { expenses: Expense[], income?: Income[] }) {
   const monthlyData = prepareMonthlyData(expenses, income)
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const [isDragging, setIsDragging] = useState(false)
+  const [startX, setStartX] = useState(0)
+  const [scrollLeft, setScrollLeft] = useState(0)
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (!scrollRef.current) return
+    setIsDragging(true)
+    setStartX(e.pageX - scrollRef.current.offsetLeft)
+    setScrollLeft(scrollRef.current.scrollLeft)
+    scrollRef.current.style.cursor = 'grabbing'
+  }
+
+  const handleMouseLeave = () => {
+    setIsDragging(false)
+    if (scrollRef.current) {
+      scrollRef.current.style.cursor = 'grab'
+    }
+  }
+
+  const handleMouseUp = () => {
+    setIsDragging(false)
+    if (scrollRef.current) {
+      scrollRef.current.style.cursor = 'grab'
+    }
+  }
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isDragging || !scrollRef.current) return
+    e.preventDefault()
+    const x = e.pageX - scrollRef.current.offsetLeft
+    const walk = (x - startX) * 2 // Adjust scroll speed
+    scrollRef.current.scrollLeft = scrollLeft - walk
+  }
+
+  // Add global mouse up handler to stop dragging when mouse is released anywhere
+  useEffect(() => {
+    const handleGlobalMouseUp = () => {
+      setIsDragging(false)
+      if (scrollRef.current) {
+        scrollRef.current.style.cursor = 'grab'
+      }
+    }
+
+    if (isDragging) {
+      document.addEventListener('mouseup', handleGlobalMouseUp)
+      return () => {
+        document.removeEventListener('mouseup', handleGlobalMouseUp)
+      }
+    }
+  }, [isDragging])
+
+  // Auto-scroll to position showing current month - 3 months
+  useEffect(() => {
+    if (!scrollRef.current || monthlyData.length === 0) return
+
+    const today = new Date()
+    const targetDate = new Date(today.getFullYear(), today.getMonth() - 3, 1)
+    
+    // Find the index of the target month in our data
+    const targetIndex = monthlyData.findIndex(data => {
+      const dataDate = new Date(data.date)
+      return dataDate.getFullYear() === targetDate.getFullYear() && 
+             dataDate.getMonth() === targetDate.getMonth()
+    })
+
+    if (targetIndex !== -1) {
+      // Scroll to position the target month in view (each month is 80px wide)
+      const scrollPosition = Math.max(0, targetIndex * 80 - 160) // Show target month with some left padding
+      scrollRef.current.scrollLeft = scrollPosition
+    }
+  }, [monthlyData])
   
   // Calculate category totals
   const categoryTotals = expenses.reduce((acc, expense) => {
@@ -135,6 +258,9 @@ export function TopCategories({ expenses, income = [] }: { expenses: Expense[], 
   const sortedCategories = Object.entries(categoryTotals)
     .sort(([, a], [, b]) => b - a)
     .slice(0, 6)
+  
+  // Get total expenses for percentage calculation
+  const totalExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0)
 
   return (
     <div className="grid gap-4 md:grid-cols-2">
@@ -152,8 +278,8 @@ export function TopCategories({ expenses, income = [] }: { expenses: Expense[], 
           <div className="space-y-6">
             {sortedCategories.map(([category, total]) => {
               const info = categoryInfo[category] || { emoji: "💰", color: "#6B7280" }
-              const budgetLimit = total * 1.5
-              const percentage = (total / budgetLimit) * 100
+              // Calculate percentage based on total expenses
+              const percentage = totalExpenses > 0 ? (total / totalExpenses) * 100 : 0
               
               return (
                 <div key={category} className="space-y-2">
@@ -164,7 +290,7 @@ export function TopCategories({ expenses, income = [] }: { expenses: Expense[], 
                       <span className="text-sm ml-2">${total.toFixed(0)}</span>
                     </div>
                     <div className="text-sm text-muted-foreground">
-                      ${budgetLimit.toFixed(0)}
+                      {totalExpenses > 0 ? `${Math.round(percentage)}%` : '0%'}
                     </div>
                   </div>
                   <div className="relative h-2 w-full rounded-full bg-muted/30">
@@ -189,13 +315,30 @@ export function TopCategories({ expenses, income = [] }: { expenses: Expense[], 
           <CardDescription>Income vs Expenses over time</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="h-[300px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={monthlyData}>
+          <div className="relative">
+            {/* Scroll fade indicators */}
+            <div className="absolute left-0 top-0 bottom-6 w-8 bg-gradient-to-r from-card to-transparent pointer-events-none z-10" />
+            <div className="absolute right-0 top-0 bottom-6 w-8 bg-gradient-to-l from-card to-transparent pointer-events-none z-10" />
+            
+            <div 
+              ref={scrollRef}
+              className="h-[300px] w-full overflow-x-auto overflow-y-hidden scroll-smooth [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none] cursor-grab select-none"
+              onMouseDown={handleMouseDown}
+              onMouseLeave={handleMouseLeave}
+              onMouseUp={handleMouseUp}
+              onMouseMove={handleMouseMove}
+            >
+              <div className="h-full" style={{ width: `${monthlyData.length * 80}px`, minWidth: '100%' }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart 
+                    data={monthlyData} 
+                    margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                  >
                 <XAxis
                   dataKey="date"
                   tickLine={false}
                   axisLine={false}
+                  className="text-xs"
                   tickFormatter={(value) => {
                     return new Date(value).toLocaleDateString("en-US", {
                       month: "short",
@@ -203,24 +346,38 @@ export function TopCategories({ expenses, income = [] }: { expenses: Expense[], 
                   }}
                 />
                 <Tooltip
-                  formatter={(value: number) => [`$${value.toFixed(2)}`, 'Amount']}
+                  contentStyle={{
+                    backgroundColor: 'hsl(var(--popover))',
+                    border: '1px solid hsl(var(--border))',
+                    borderRadius: '6px',
+                    color: 'hsl(var(--popover-foreground))'
+                  }}
+                  formatter={(value: number, name: string) => {
+                    const label = name === 'expenses' ? 'Expenses' : 
+                                 name === 'income' ? 'Income' : 'Profit';
+                    return [`$${value.toFixed(2)}`, label];
+                  }}
                   labelFormatter={(label) => new Date(label).toLocaleDateString("en-US", {
                     month: "long",
                     year: "numeric"
                   })}
                 />
                 <Bar
-                  dataKey="profit"
-                  fill="var(--green-500)"
-                  radius={[4, 4, 0, 0]}
+                  dataKey="income"
+                  fill="#10B981"
+                  radius={[2, 2, 0, 0]}
+                  name="income"
                 />
                 <Bar
                   dataKey="expenses"
-                  fill="var(--red-500)"
-                  radius={[0, 0, 4, 4]}
+                  fill="#EF4444"
+                  radius={[2, 2, 0, 0]}
+                  name="expenses"
                 />
               </BarChart>
             </ResponsiveContainer>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>

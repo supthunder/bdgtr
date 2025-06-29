@@ -84,7 +84,7 @@ export default function ReportsPage() {
       transaction.name.toLowerCase().includes(searchLower) ||
       transaction.category.toLowerCase().includes(searchLower) ||
       Math.abs(transaction.amount).toString().includes(searchLower) ||
-      transaction.frequency.toLowerCase().includes(searchLower)
+      transaction.type.toLowerCase().includes(searchLower)
     )
   })
 
@@ -95,7 +95,7 @@ export default function ReportsPage() {
     const aValue = a[sortConfig.key]
     const bValue = b[sortConfig.key]
 
-    if (sortConfig.key === "name" || sortConfig.key === "category" || sortConfig.key === "frequency") {
+    if (sortConfig.key === "name" || sortConfig.key === "category" || sortConfig.key === "type") {
       return sortConfig.direction === "asc"
         ? String(aValue).localeCompare(String(bValue))
         : String(bValue).localeCompare(String(aValue))
@@ -128,14 +128,13 @@ export default function ReportsPage() {
 
   // Export to Excel (CSV)
   const exportToExcel = () => {
-    const headers = ["Name", "Amount", "Category", "Frequency", "Date", "Created At", "Type"]
+    const headers = ["Name", "Amount", "Category", "Date", "Created At", "Type"]
     const data = sortedTransactions.map((transaction) => [
       transaction.name,
       transaction.amount,
-      `${transaction.emoji} ${transaction.category}`,
-      transaction.frequency,
-      format(new Date(transaction.date), "PPP"),
-      format(new Date(transaction.createdAt), "PPP"),
+      transaction.category,
+      format(new Date(transaction.date), "yyyy-MM-dd"),
+      format(new Date(transaction.createdAt), "yyyy-MM-dd"),
       transaction.type
     ])
 
@@ -166,14 +165,13 @@ export default function ReportsPage() {
     doc.text(`Generated on ${format(new Date(), "PPP")}`, 14, 22)
 
     // Prepare data for table
-    const headers = [["Name", "Amount", "Category", "Frequency", "Date", "Created At", "Type"]]
+    const headers = [["Name", "Amount", "Category", "Date", "Created At", "Type"]]
     const data = sortedTransactions.map((transaction) => [
       transaction.name,
       `${transaction.amount >= 0 ? "+" : "-"}$${Math.abs(transaction.amount).toFixed(2)}`,
-      `${transaction.emoji} ${transaction.category}`,
-      transaction.frequency,
-      format(new Date(transaction.date), "PPP"),
-      format(new Date(transaction.createdAt), "PPP"),
+      transaction.category,
+      format(new Date(transaction.date), "yyyy-MM-dd"),
+      format(new Date(transaction.createdAt), "yyyy-MM-dd"),
       transaction.type
     ])
 
@@ -241,8 +239,8 @@ export default function ReportsPage() {
               <TableHead onClick={() => handleSort("amount")} className="cursor-pointer">
                 Amount {getSortIcon("amount")}
               </TableHead>
-              <TableHead onClick={() => handleSort("frequency")} className="cursor-pointer">
-                Frequency {getSortIcon("frequency")}
+              <TableHead onClick={() => handleSort("type")} className="cursor-pointer">
+                Type {getSortIcon("type")}
               </TableHead>
               <TableHead onClick={() => handleSort("date")} className="cursor-pointer">
                 Date {getSortIcon("date")}
@@ -266,8 +264,8 @@ export default function ReportsPage() {
                   {transaction.amount >= 0 ? "+" : "-"}${Math.abs(transaction.amount).toFixed(2)}
                 </TableCell>
                 <TableCell>
-                  <Badge variant="outline" className="capitalize">
-                    {transaction.frequency}
+                  <Badge variant="outline" className={transaction.type === "income" ? "text-green-600" : "text-red-600"}>
+                    {transaction.type}
                   </Badge>
                 </TableCell>
                 <TableCell>{format(new Date(transaction.date), "MMM d, yyyy")}</TableCell>

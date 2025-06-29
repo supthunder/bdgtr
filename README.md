@@ -20,7 +20,7 @@ A modern, privacy-focused budget tracking application built with Next.js and sha
   - 📝 Name and amount
   - 🏷️ Category with emoji (e.g., "🏠 Rent/Mortgage", "🪑 Furniture")
   - 🔄 Frequency options (one-time, daily, weekly, monthly, etc.)
-  - 📅 Due date tracking
+  - 📅 Date tracking (when expenses occurred)
 
 ### 📈 Reports & Analytics
 - **Detailed Reports View**
@@ -98,7 +98,7 @@ pnpm dev
 1. **Adding Expenses**
    - Click "Add Expense" button
    - Fill in expense details (name, amount, category)
-   - Select frequency and due date
+   - Select frequency and occurrence date
    - Submit to save
 
 2. **Viewing Analytics**

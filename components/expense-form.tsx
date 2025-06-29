@@ -4,7 +4,7 @@ import { useState } from "react"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { useForm } from "react-hook-form"
 import { z } from "zod"
-import { CalendarIcon, Check, ChevronsUpDown } from "lucide-react"
+import { CalendarIcon, Check, ChevronsUpDown, Clipboard } from "lucide-react"
 import { format } from "date-fns"
 import type { Expense } from "@/types/expense"
 import { toast } from "@/components/ui/use-toast"
@@ -53,7 +53,7 @@ const formSchema = z.object({
     required_error: "Please select a frequency.",
   }),
   dueDate: z.date({
-    required_error: "Please select a due date.",
+    required_error: "Please select a date.",
   }),
 })
 
@@ -77,6 +77,115 @@ export function ExpenseForm({ onSuccess, initialData, isEditing = false }: Expen
       dueDate: initialData?.dueDate ? new Date(initialData.dueDate) : new Date(),
     },
   })
+
+  // Function to parse different bank/credit card statement formats
+  function parsePastedText(text: string) {
+    try {
+      // Remove extra whitespace and normalize
+      const cleaned = text.trim()
+      
+      // Split by tabs or multiple spaces
+      const parts = cleaned.split(/\t+|\s{2,}/).filter(part => part.trim())
+      
+      let parsedData: { name?: string; amount?: number; date?: Date } = {}
+      
+      // Look for amount (contains $ or is a number)
+      const amountRegex = /^\$?(\d+(?:,\d{3})*(?:\.\d{2})?)/
+      let amountIndex = -1
+      
+      for (let i = 0; i < parts.length; i++) {
+        const match = parts[i].match(amountRegex)
+        if (match) {
+          const amount = parseFloat(match[1].replace(/,/g, ''))
+          if (amount > 0) {
+            parsedData.amount = amount
+            amountIndex = i
+            break
+          }
+        }
+      }
+      
+      // Look for date (MM/DD/YY or similar formats)
+      const dateRegex = /^(\d{1,2}\/\d{1,2}\/\d{2,4}|\d{4}-\d{2}-\d{2})/
+      let dateIndex = -1
+      
+      for (let i = 0; i < parts.length; i++) {
+        if (parts[i].match(dateRegex)) {
+          try {
+            let dateStr = parts[i]
+            // Convert MM/DD/YY to MM/DD/YYYY if needed
+            if (dateStr.match(/^\d{1,2}\/\d{1,2}\/\d{2}$/)) {
+              const [month, day, year] = dateStr.split('/')
+              const fullYear = parseInt(year) + (parseInt(year) < 50 ? 2000 : 1900)
+              dateStr = `${month}/${day}/${fullYear}`
+            }
+            parsedData.date = new Date(dateStr)
+            dateIndex = i
+            break
+          } catch {
+            // Skip invalid dates
+          }
+        }
+      }
+      
+      // Extract name/description (skip date and amount parts)
+      const nameParts = parts.filter((_, index) => 
+        index !== amountIndex && index !== dateIndex && index !== 0 // Skip first date if there are two dates
+      )
+      
+      if (nameParts.length > 0) {
+        // Clean up the name - remove transaction IDs and phone numbers
+        let name = nameParts.join(' ')
+        // Remove common patterns like phone numbers, transaction IDs
+        name = name.replace(/\b\d{3}-\d{3}-\d{4}\b/g, '') // Phone numbers
+        name = name.replace(/\b[A-Z0-9#]{10,}\b/g, '') // Transaction IDs
+        name = name.replace(/\s+/g, ' ').trim()
+        
+        if (name.length > 2) {
+          parsedData.name = name
+        }
+      }
+      
+      return parsedData
+    } catch (error) {
+      console.error('Error parsing pasted text:', error)
+      return {}
+    }
+  }
+
+  async function handlePaste() {
+    try {
+      const text = await navigator.clipboard.readText()
+      const parsed = parsePastedText(text)
+      
+      if (parsed.name) {
+        form.setValue('name', parsed.name)
+      }
+      if (parsed.amount) {
+        form.setValue('amount', parsed.amount)
+      }
+      if (parsed.date && !isNaN(parsed.date.getTime())) {
+        form.setValue('dueDate', parsed.date)
+      }
+      
+      // Set default frequency to one-time for pasted expenses
+      if (!form.getValues('frequency')) {
+        form.setValue('frequency', 'ONE_TIME')
+      }
+      
+      toast({
+        title: "Data Pasted",
+        description: "Form fields have been auto-filled from clipboard data",
+      })
+    } catch (error) {
+      console.error('Failed to paste:', error)
+      toast({
+        title: "Paste Failed",
+        description: "Could not read from clipboard. Please paste manually.",
+        variant: "destructive",
+      })
+    }
+  }
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true)
@@ -117,6 +226,21 @@ export function ExpenseForm({ onSuccess, initialData, isEditing = false }: Expen
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <div className="flex justify-between items-center">
+          <h3 className="text-lg font-medium">
+            {isEditing ? 'Edit Expense' : 'Add New Expense'}
+          </h3>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={handlePaste}
+            className="flex items-center gap-2"
+          >
+            <Clipboard className="h-4 w-4" />
+            Paste
+          </Button>
+        </div>
         <FormField
           control={form.control}
           name="name"
