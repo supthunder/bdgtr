@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { DollarSign, Calendar, Home, Zap } from "lucide-react"
 import { getExpenses, getIncome } from "@/app/actions"
 import type { Expense } from "@/types/expense"
@@ -103,72 +104,150 @@ function prepareMonthlyData(expenses: Expense[], income: Income[]) {
 }
 
 export function DashboardCards({ expenses, income }: DashboardCardsProps) {
+  const [timeFilter, setTimeFilter] = useState<"total" | "monthly" | "yearly">("total")
+  
+  // Filter data based on selected timeframe
+  const getFilteredData = () => {
+    const today = new Date()
+    const currentYear = today.getFullYear()
+    const currentMonth = today.getMonth()
+    
+    if (timeFilter === "monthly") {
+      const monthStart = new Date(currentYear, currentMonth, 1)
+      const monthEnd = new Date(currentYear, currentMonth + 1, 0)
+      
+      return {
+        expenses: expenses.filter(e => {
+          const date = new Date(e.dueDate)
+          return date >= monthStart && date <= monthEnd
+        }),
+        income: income.filter(i => {
+          const date = new Date(i.receiveDate)
+          return date >= monthStart && date <= monthEnd
+        })
+      }
+    }
+    
+    if (timeFilter === "yearly") {
+      const yearStart = new Date(currentYear, 0, 1)
+      const yearEnd = new Date(currentYear, 11, 31)
+      
+      return {
+        expenses: expenses.filter(e => {
+          const date = new Date(e.dueDate)
+          return date >= yearStart && date <= yearEnd
+        }),
+        income: income.filter(i => {
+          const date = new Date(i.receiveDate)
+          return date >= yearStart && date <= yearEnd
+        })
+      }
+    }
+    
+    // Total - return all data
+    return { expenses, income }
+  }
+  
+  const filteredData = getFilteredData()
   const monthlyData = prepareMonthlyData(expenses, income)
-  const totalExpenses = expenses.reduce((sum, expense) => sum + expense.amount, 0)
-  const totalIncome = income.reduce((sum, inc) => sum + inc.amount, 0)
+  const totalExpenses = filteredData.expenses.reduce((sum, expense) => sum + expense.amount, 0)
+  const totalIncome = filteredData.income.reduce((sum, inc) => sum + inc.amount, 0)
   const balance = totalIncome - totalExpenses
   
-  // Calculate category-specific totals
-  const mortgageExpenses = expenses
+  // Calculate category-specific totals using filtered data
+  const mortgageExpenses = filteredData.expenses
     .filter(expense => expense.category === 'housing')
     .reduce((sum, expense) => sum + expense.amount, 0)
   
-  const utilitiesExpenses = expenses
-    .filter(expense => expense.category === 'utilities')
+  const utilitiesExpenses = filteredData.expenses
+    .filter(expense => ['utilities', 'internet', 'electrical', 'plumbing'].includes(expense.category))
     .reduce((sum, expense) => sum + expense.amount, 0)
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total Income</CardTitle>
-          <DollarSign className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold text-green-500">+${totalIncome.toFixed(2)}</div>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Total Expenses</CardTitle>
-          <DollarSign className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold text-red-500">-${totalExpenses.toFixed(2)}</div>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Balance</CardTitle>
-          <DollarSign className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className={cn(
-            "text-2xl font-bold",
-            balance >= 0 ? "text-green-500" : "text-red-500"
-          )}>
-            {balance >= 0 ? "+" : "-"}${Math.abs(balance).toFixed(2)}
-          </div>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Mortgage</CardTitle>
-          <Home className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold text-blue-500">-${mortgageExpenses.toFixed(2)}</div>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">Utilities</CardTitle>
-          <Zap className="h-4 w-4 text-muted-foreground" />
-        </CardHeader>
-        <CardContent>
-          <div className="text-2xl font-bold text-orange-500">-${utilitiesExpenses.toFixed(2)}</div>
-        </CardContent>
-      </Card>
+    <div className="space-y-4">
+      {/* Filter Dropdown */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="text-lg font-medium">Financial Overview</h3>
+          <p className="text-sm text-muted-foreground">
+            {timeFilter === "total" && "All time totals"}
+            {timeFilter === "monthly" && "Current month totals"}
+            {timeFilter === "yearly" && "Current year totals"}
+          </p>
+        </div>
+        <Select value={timeFilter} onValueChange={(value: "total" | "monthly" | "yearly") => setTimeFilter(value)}>
+          <SelectTrigger className="w-32">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="total">Total</SelectItem>
+            <SelectItem value="monthly">Monthly</SelectItem>
+            <SelectItem value="yearly">Yearly</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Cards Grid */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              {timeFilter === "total" && "Total Income"}
+              {timeFilter === "monthly" && "Monthly Income"}
+              {timeFilter === "yearly" && "Yearly Income"}
+            </CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-500">+${totalIncome.toFixed(2)}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              {timeFilter === "total" && "Total Expenses"}
+              {timeFilter === "monthly" && "Monthly Expenses"}
+              {timeFilter === "yearly" && "Yearly Expenses"}
+            </CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-red-500">-${totalExpenses.toFixed(2)}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Balance</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className={cn(
+              "text-2xl font-bold",
+              balance >= 0 ? "text-green-500" : "text-red-500"
+            )}>
+              {balance >= 0 ? "+" : "-"}${Math.abs(balance).toFixed(2)}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Mortgage</CardTitle>
+            <Home className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-blue-500">-${mortgageExpenses.toFixed(2)}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Utilities</CardTitle>
+            <Zap className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-orange-500">-${utilitiesExpenses.toFixed(2)}</div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   )
 }
