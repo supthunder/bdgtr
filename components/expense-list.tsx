@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
 import { MoreHorizontal, PlusCircle, Pencil, Trash2, RefreshCw } from "lucide-react"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { format } from "date-fns"
 import { getExpenses, deleteExpense, addExpense, updateExpense, refreshMonthlyExpenses } from "@/app/actions"
 import type { Expense } from "@/types/expense"
@@ -269,6 +269,9 @@ export function ExpenseList({ initialExpenses }: ExpenseListProps) {
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Add New Expense</DialogTitle>
+            <DialogDescription>
+              Create a new expense entry for your budget tracking.
+            </DialogDescription>
           </DialogHeader>
           <ExpenseForm onSuccess={handleSuccess} />
         </DialogContent>
@@ -278,6 +281,9 @@ export function ExpenseList({ initialExpenses }: ExpenseListProps) {
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Edit Expense</DialogTitle>
+            <DialogDescription>
+              Modify the details of this expense entry.
+            </DialogDescription>
           </DialogHeader>
           {selectedExpense && (
             <ExpenseForm 

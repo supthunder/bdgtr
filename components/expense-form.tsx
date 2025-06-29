@@ -419,9 +419,6 @@ export function ExpenseForm({ onSuccess, initialData, isEditing = false }: Expen
                     mode="single"
                     selected={field.value}
                     onSelect={field.onChange}
-                    disabled={(date) =>
-                      date > new Date() || date < new Date("1900-01-01")
-                    }
                     initialFocus
                   />
                 </PopoverContent>
