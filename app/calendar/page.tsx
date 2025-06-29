@@ -2,14 +2,13 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { getExpenses, getIncome } from "@/app/actions"
 import { getRecurringExpensesForDate } from "@/lib/utils"
 import type { Expense } from "@/types/expense"
 import type { Income } from "@/types/income"
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, startOfWeek, endOfWeek, isSameMonth, isToday, addMonths, subMonths } from "date-fns"
-import { ChevronLeft, ChevronRight, Plus, Upload, RefreshCw, Search } from "lucide-react"
+import { ChevronLeft, ChevronRight } from "lucide-react"
 import { cn } from "@/lib/utils"
 
 export default function CalendarPage() {
@@ -20,7 +19,6 @@ export default function CalendarPage() {
   const [selectedDayIncome, setSelectedDayIncome] = useState<Income[]>([])
   const [isDialogOpen, setIsDialogOpen] = useState(false)
   const [currentMonth, setCurrentMonth] = useState(new Date())
-  const [searchTerm, setSearchTerm] = useState("")
 
   useEffect(() => {
     const loadData = async () => {
@@ -80,9 +78,9 @@ export default function CalendarPage() {
     })
     .reduce((sum, inc) => sum + inc.amount, 0)
 
-  // Navigation months for sidebar
+  // Navigation months for sidebar (2 months before, current, 3 months after)
   const navigationMonths = []
-  for (let i = -12; i <= 12; i++) {
+  for (let i = -2; i <= 3; i++) {
     navigationMonths.push(addMonths(new Date(), i))
   }
 
@@ -91,15 +89,6 @@ export default function CalendarPage() {
       {/* Sidebar */}
       <div className="w-64 bg-muted/50 p-4 border-r">
         <div className="space-y-2">
-          <h3 className="font-semibold text-sm text-muted-foreground uppercase tracking-wide">Transaction Type</h3>
-          <select className="w-full p-2 rounded border bg-background">
-            <option>All Types</option>
-            <option>Income</option>
-            <option>Expense</option>
-          </select>
-        </div>
-        
-        <div className="mt-6 space-y-2">
           {navigationMonths.map((month) => (
             <button
               key={month.toISOString()}
@@ -120,38 +109,7 @@ export default function CalendarPage() {
         {/* Header */}
         <div className="p-4 border-b bg-background">
           <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <h1 className="text-xl font-semibold">Transaction Calendar</h1>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add
-                </Button>
-                <Button variant="outline" size="sm">
-                  <Upload className="h-4 w-4 mr-2" />
-                  Import
-                </Button>
-                <Button variant="outline" size="sm">
-                  <RefreshCw className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-4 text-sm">
-                <span className="text-green-600">Total Income: ${monthlyIncome.toLocaleString()}</span>
-                <span className="text-red-600">Total Expense: ${monthlyExpenses.toLocaleString()}</span>
-              </div>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search transaction description"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 w-80"
-                />
-              </div>
-            </div>
+            <h1 className="text-xl font-semibold">Transaction Calendar</h1>
           </div>
         </div>
 
