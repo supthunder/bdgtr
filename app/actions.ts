@@ -1,8 +1,8 @@
 'use server'
 
 import { prisma } from '@/lib/db'
-import type { Expense } from '@/types/expense'
-import type { Income } from '@/types/income'
+import type { Expense, ExpenseCreate } from '@/types/expense'
+import type { Income, IncomeCreate } from '@/types/income'
 import { revalidatePath } from 'next/cache'
 import { FrequencyType } from '@/lib/generated/prisma'
 import fs from 'fs/promises'
@@ -88,12 +88,11 @@ export async function getIncome(): Promise<Income[]> {
   }
 }
 
-export async function addExpense(expense: Expense): Promise<void> {
+export async function addExpense(expense: ExpenseCreate): Promise<void> {
   try {
     await prisma.$transaction(async (tx) => {
       await tx.transaction.create({
         data: {
-          id: expense.id,
           type: "EXPENSE",
           name: expense.name,
           amount: expense.amount,
@@ -113,12 +112,11 @@ export async function addExpense(expense: Expense): Promise<void> {
   }
 }
 
-export async function addIncome(income: Income): Promise<void> {
+export async function addIncome(income: IncomeCreate): Promise<void> {
   try {
     await prisma.$transaction(async (tx) => {
       await tx.transaction.create({
         data: {
-          id: income.id,
           type: "INCOME",
           name: income.name,
           amount: income.amount,
@@ -219,6 +217,99 @@ export async function updateIncome(updatedIncome: Income): Promise<void> {
   } catch (error) {
     console.error("Failed to update income in database:", error)
     throw error
+  }
+}
+
+export async function refreshMonthlyExpenses(): Promise<{ success: boolean; message: string; added?: number }> {
+  try {
+    const currentDate = new Date()
+    const currentYear = currentDate.getFullYear()
+    const currentMonth = currentDate.getMonth()
+    
+    // Get start and end of current month
+    const monthStart = new Date(currentYear, currentMonth, 1)
+    const monthEnd = new Date(currentYear, currentMonth + 1, 0)
+    
+    // Get all monthly recurring expenses
+    const monthlyExpenses = await prisma.transaction.findMany({
+      where: {
+        type: "EXPENSE",
+        frequency: "MONTHLY"
+      }
+    })
+    
+    // Get all expenses for current month
+    const currentMonthExpenses = await prisma.transaction.findMany({
+      where: {
+        type: "EXPENSE",
+        date: {
+          gte: monthStart,
+          lte: monthEnd
+        }
+      }
+    })
+    
+    let addedCount = 0
+    
+    await prisma.$transaction(async (tx) => {
+      for (const monthlyExpense of monthlyExpenses) {
+        // Check if this monthly expense already exists for current month
+        const existsThisMonth = currentMonthExpenses.some(expense => 
+          expense.name === monthlyExpense.name &&
+          expense.category === monthlyExpense.category &&
+          expense.amount === monthlyExpense.amount
+        )
+        
+        if (!existsThisMonth) {
+          // Get the day from the original expense
+          const originalDay = monthlyExpense.date.getDate()
+          
+          // Create date for current month with same day, handling month-end edge cases
+          const newDate = new Date(currentYear, currentMonth, originalDay)
+          
+          // If the day doesn't exist in current month (e.g., Jan 31 -> Feb 31), 
+          // JavaScript automatically adjusts to the last valid day
+          if (newDate.getMonth() !== currentMonth) {
+            // This means the day was too high for the current month, use last day of month
+            newDate.setDate(0) // Sets to last day of previous month
+            newDate.setMonth(currentMonth + 1) // Move to next month
+            newDate.setDate(0) // Now sets to last day of current month
+          }
+          
+          // Create new expense for current month
+          await tx.transaction.create({
+            data: {
+              type: "EXPENSE",
+              name: monthlyExpense.name,
+              amount: monthlyExpense.amount,
+              category: monthlyExpense.category,
+              frequency: monthlyExpense.frequency,
+              date: newDate,
+              emoji: monthlyExpense.emoji,
+              createdAt: new Date()
+            }
+          })
+          addedCount++
+        }
+      }
+    })
+    
+    revalidatePath('/', 'layout')
+    revalidatePath('/dashboard')
+    
+    return {
+      success: true,
+      message: addedCount > 0 
+        ? `Added ${addedCount} monthly expense${addedCount > 1 ? 's' : ''} for ${monthStart.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`
+        : 'All monthly expenses already exist for this month',
+      added: addedCount
+    }
+  } catch (error) {
+    console.error("Failed to refresh monthly expenses:", error)
+    return {
+      success: false,
+      message: 'Failed to refresh monthly expenses. Please try again.'
+    }
   }
 }
 

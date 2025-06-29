@@ -8,3 +8,5 @@ export interface Expense {
   emoji: string
   createdAt: string
 }
+
+export type ExpenseCreate = Omit<Expense, 'id'> & { id?: string }

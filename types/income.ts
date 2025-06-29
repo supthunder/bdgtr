@@ -7,4 +7,6 @@ export interface Income {
   receiveDate: string
   emoji: string
   createdAt: string
-} 
+}
+
+export type IncomeCreate = Omit<Income, 'id'> & { id?: string } 

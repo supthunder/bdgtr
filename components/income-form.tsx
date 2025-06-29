@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { CalendarIcon } from "lucide-react"
 import { format } from "date-fns"
-import type { Income } from "@/types/income"
+import type { Income, IncomeCreate } from "@/types/income"
 import { toast } from "@/components/ui/use-toast"
 
 import { Button } from "@/components/ui/button"
@@ -66,22 +66,45 @@ export function IncomeForm({ onSuccess, initialData, isEditing = false }: Income
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true)
     try {
-      const incomeData = {
-        id: initialData?.id || Date.now().toString(),
-        name: values.name,
-        amount: values.amount,
-        category: values.category,
-        frequency: values.frequency,
-        receiveDate: values.receiveDate.toISOString(),
-        emoji: categories.find((c) => c.value === values.category)?.label.split(" ")[0] || "💰",
-        createdAt: initialData?.createdAt || new Date().toISOString(),
-      }
+      if (isEditing && initialData?.id) {
+        const incomeData: Income = {
+          id: initialData.id,
+          name: values.name,
+          amount: values.amount,
+          category: values.category,
+          frequency: values.frequency,
+          receiveDate: values.receiveDate.toISOString(),
+          emoji: categories.find((c) => c.value === values.category)?.label.split(" ")[0] || "💰",
+          createdAt: initialData.createdAt,
+        }
 
-      if (onSuccess) {
-        onSuccess(incomeData)
-      }
+        if (onSuccess) {
+          onSuccess(incomeData)
+        }
 
-      await (isEditing ? updateIncome(incomeData) : addIncome(incomeData))
+        await updateIncome(incomeData)
+      } else {
+        const incomeData: IncomeCreate = {
+          name: values.name,
+          amount: values.amount,
+          category: values.category,
+          frequency: values.frequency,
+          receiveDate: values.receiveDate.toISOString(),
+          emoji: categories.find((c) => c.value === values.category)?.label.split(" ")[0] || "💰",
+          createdAt: new Date().toISOString(),
+        }
+
+        // For onSuccess callback, we need to create a temporary ID for the UI
+        if (onSuccess) {
+          const tempIncome: Income = {
+            ...incomeData,
+            id: 'temp-' + Date.now(),
+          }
+          onSuccess(tempIncome)
+        }
+
+        await addIncome(incomeData)
+      }
       form.reset()
       toast({
         title: "Success",

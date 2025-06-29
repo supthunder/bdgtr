@@ -12,10 +12,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
-import { MoreHorizontal, PlusCircle, Pencil, Trash2 } from "lucide-react"
+import { MoreHorizontal, PlusCircle, Pencil, Trash2, RefreshCw } from "lucide-react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { format } from "date-fns"
-import { getExpenses, deleteExpense, addExpense, updateExpense } from "@/app/actions"
+import { getExpenses, deleteExpense, addExpense, updateExpense, refreshMonthlyExpenses } from "@/app/actions"
 import type { Expense } from "@/types/expense"
 import { Badge } from "@/components/ui/badge"
 import { ExpenseForm } from "@/components/expense-form"
@@ -34,6 +34,7 @@ export function ExpenseList({ initialExpenses }: ExpenseListProps) {
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null)
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
+  const [isRefreshing, setIsRefreshing] = useState(false)
 
   const loadExpenses = useCallback(async () => {
     setIsLoading(true)
@@ -53,10 +54,10 @@ export function ExpenseList({ initialExpenses }: ExpenseListProps) {
   }, [])
 
   const handleDelete = async (id: string) => {
+    // Store the expense to be deleted for potential rollback
+    const expenseToDelete = expenses.find(e => e.id === id)
+    
     try {
-      // Store the expense to be deleted for potential rollback
-      const expenseToDelete = expenses.find(e => e.id === id)
-      
       // Optimistically remove from UI
       setExpenses(prev => prev.filter(e => e.id !== id))
       
@@ -84,34 +85,17 @@ export function ExpenseList({ initialExpenses }: ExpenseListProps) {
     }
   }
 
-  const handleSuccess = async (newExpense: Expense) => {
-    try {
-      // Optimistically add to UI
-      setExpenses(prev => [newExpense, ...prev].sort((a, b) => 
-        new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
-      ))
-      setIsAddDialogOpen(false)
-      
-      // Add to database
-      await addExpense(newExpense)
-      
-      // Refresh server state in background
-      startTransition(() => {
-        router.refresh()
-        // Reload expenses to ensure consistency
-        loadExpenses()
-      })
-    } catch (error) {
-      console.error("Failed to add expense:", error)
-      // Remove the optimistically added expense if the operation failed
-      setExpenses(prev => prev.filter(e => e.id !== newExpense.id))
-      // Show error toast
-      toast({
-        title: "Error",
-        description: "Failed to add expense. Please try again.",
-        variant: "destructive",
-      })
-    }
+  const handleSuccess = async () => {
+    // Close dialog and refresh data from database
+    setIsAddDialogOpen(false)
+    
+    // Reload expenses from database to show the new expense
+    await loadExpenses()
+    
+    // Refresh server state
+    startTransition(() => {
+      router.refresh()
+    })
   }
 
   const handleEdit = (expense: Expense) => {
@@ -119,43 +103,54 @@ export function ExpenseList({ initialExpenses }: ExpenseListProps) {
     setIsEditDialogOpen(true)
   }
 
-  const handleEditSuccess = async (updatedExpense: Expense) => {
+  const handleEditSuccess = async () => {
+    // Close dialog and refresh data from database
+    setIsEditDialogOpen(false)
+    setSelectedExpense(null)
+    
+    // Reload expenses from database to show the updated expense
+    await loadExpenses()
+    
+    // Refresh server state
+    startTransition(() => {
+      router.refresh()
+    })
+  }
+
+  const handleRefreshMonthly = async () => {
+    setIsRefreshing(true)
     try {
-      // Store the original expense for potential rollback
-      const originalExpense = expenses.find(e => e.id === updatedExpense.id)
+      const result = await refreshMonthlyExpenses()
       
-      // Optimistically update UI
-      setExpenses(prev => prev.map(e => 
-        e.id === updatedExpense.id ? updatedExpense : e
-      ).sort((a, b) => 
-        new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
-      ))
-      setIsEditDialogOpen(false)
-      setSelectedExpense(null)
-      
-      // Update in database
-      await updateExpense(updatedExpense)
-      
-      // Refresh server state in background
-      startTransition(() => {
-        router.refresh()
-        // Reload expenses to ensure consistency
-        loadExpenses()
-      })
-    } catch (error) {
-      console.error("Failed to update expense:", error)
-      // Revert to original expense if update failed
-      if (originalExpense) {
-        setExpenses(prev => prev.map(e => 
-          e.id === updatedExpense.id ? originalExpense : e
-        ))
+      if (result.success) {
+        toast({
+          title: "Success",
+          description: result.message,
+        })
+        
+        // Reload expenses to show new entries
+        await loadExpenses()
+        
+        // Refresh server state
+        startTransition(() => {
+          router.refresh()
+        })
+      } else {
+        toast({
+          title: "Error",
+          description: result.message,
+          variant: "destructive",
+        })
       }
-      // Show error toast
+    } catch (error) {
+      console.error("Failed to refresh monthly expenses:", error)
       toast({
         title: "Error",
-        description: "Failed to update expense. Please try again.",
+        description: "Failed to refresh monthly expenses. Please try again.",
         variant: "destructive",
       })
+    } finally {
+      setIsRefreshing(false)
     }
   }
 
@@ -188,10 +183,21 @@ export function ExpenseList({ initialExpenses }: ExpenseListProps) {
             <CardTitle>Expenses</CardTitle>
             <CardDescription>Manage your expenses</CardDescription>
           </div>
-          <Button onClick={() => setIsAddDialogOpen(true)} variant="outline" size="sm">
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Add Expense
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button 
+              onClick={handleRefreshMonthly} 
+              variant="outline" 
+              size="sm"
+              disabled={isRefreshing}
+            >
+              <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+              Refresh Monthly
+            </Button>
+            <Button onClick={() => setIsAddDialogOpen(true)} variant="outline" size="sm">
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Add Expense
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           {isLoading ? (

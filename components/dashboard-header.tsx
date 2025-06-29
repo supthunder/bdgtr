@@ -1,6 +1,5 @@
 "use client"
 
-import { ModeToggle } from "@/components/mode-toggle"
 import { BackupManager } from "@/components/backup-manager"
 
 export function DashboardHeader() {
@@ -12,7 +11,6 @@ export function DashboardHeader() {
       </div>
       <div className="flex items-center gap-2">
         <BackupManager />
-        <ModeToggle />
       </div>
     </div>
   )

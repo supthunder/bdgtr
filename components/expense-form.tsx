@@ -6,7 +6,7 @@ import { useForm } from "react-hook-form"
 import { z } from "zod"
 import { CalendarIcon, Check, ChevronsUpDown, Clipboard } from "lucide-react"
 import { format } from "date-fns"
-import type { Expense } from "@/types/expense"
+import type { Expense, ExpenseCreate } from "@/types/expense"
 import { toast } from "@/components/ui/use-toast"
 
 import { Button } from "@/components/ui/button"
@@ -58,7 +58,7 @@ const formSchema = z.object({
 })
 
 interface ExpenseFormProps {
-  onSuccess?: (expense: Expense) => void
+  onSuccess?: () => void
   initialData?: Expense
   isEditing?: boolean
 }
@@ -73,7 +73,7 @@ export function ExpenseForm({ onSuccess, initialData, isEditing = false }: Expen
       name: initialData?.name || "",
       amount: initialData?.amount || 0,
       category: initialData?.category || undefined,
-      frequency: initialData?.frequency || undefined,
+      frequency: initialData?.frequency || "ONE_TIME",
       dueDate: initialData?.dueDate ? new Date(initialData.dueDate) : new Date(),
     },
   })
@@ -89,8 +89,8 @@ export function ExpenseForm({ onSuccess, initialData, isEditing = false }: Expen
       
       let parsedData: { name?: string; amount?: number; date?: Date } = {}
       
-      // Look for amount (contains $ or is a number)
-      const amountRegex = /^\$?(\d+(?:,\d{3})*(?:\.\d{2})?)/
+      // Look for amount (contains $ or is a number with possible commas)
+      const amountRegex = /^\$?(\d{1,3}(?:,\d{3})*(?:\.\d{2})?|\d+(?:\.\d{2})?)$/
       let amountIndex = -1
       
       for (let i = 0; i < parts.length; i++) {
@@ -105,44 +105,57 @@ export function ExpenseForm({ onSuccess, initialData, isEditing = false }: Expen
         }
       }
       
-      // Look for date (MM/DD/YY or similar formats)
-      const dateRegex = /^(\d{1,2}\/\d{1,2}\/\d{2,4}|\d{4}-\d{2}-\d{2})/
-      let dateIndex = -1
+      // Find ALL date indices (MM/DD/YY or similar formats)
+      const dateRegex = /^(\d{1,2}\/\d{1,2}\/\d{2,4}|\d{4}-\d{2}-\d{2})$/
+      const dateIndices: number[] = []
+      let parsedDate: Date | undefined
       
       for (let i = 0; i < parts.length; i++) {
         if (parts[i].match(dateRegex)) {
-          try {
-            let dateStr = parts[i]
-            // Convert MM/DD/YY to MM/DD/YYYY if needed
-            if (dateStr.match(/^\d{1,2}\/\d{1,2}\/\d{2}$/)) {
-              const [month, day, year] = dateStr.split('/')
-              const fullYear = parseInt(year) + (parseInt(year) < 50 ? 2000 : 1900)
-              dateStr = `${month}/${day}/${fullYear}`
+          dateIndices.push(i)
+          if (!parsedDate) {
+            try {
+              let dateStr = parts[i]
+              // Convert MM/DD/YY to MM/DD/YYYY if needed
+              if (dateStr.match(/^\d{1,2}\/\d{1,2}\/\d{2}$/)) {
+                const [month, day, year] = dateStr.split('/')
+                const fullYear = parseInt(year) + (parseInt(year) < 50 ? 2000 : 1900)
+                dateStr = `${month}/${day}/${fullYear}`
+              }
+              parsedDate = new Date(dateStr)
+              if (!isNaN(parsedDate.getTime())) {
+                parsedData.date = parsedDate
+              }
+            } catch {
+              // Skip invalid dates
             }
-            parsedData.date = new Date(dateStr)
-            dateIndex = i
-            break
-          } catch {
-            // Skip invalid dates
           }
         }
       }
       
-      // Extract name/description (skip date and amount parts)
-      const nameParts = parts.filter((_, index) => 
-        index !== amountIndex && index !== dateIndex && index !== 0 // Skip first date if there are two dates
-      )
+      // Extract name/description (exclude ALL date indices and amount index)
+      const excludeIndices = [...dateIndices, amountIndex].filter(idx => idx !== -1)
+      const nameParts = parts.filter((_, index) => !excludeIndices.includes(index))
       
       if (nameParts.length > 0) {
-        // Clean up the name - remove transaction IDs and phone numbers
+        // Join the parts and clean up
         let name = nameParts.join(' ')
-        // Remove common patterns like phone numbers, transaction IDs
+        
+        // Remove common patterns like phone numbers, transaction IDs, extra amounts
         name = name.replace(/\b\d{3}-\d{3}-\d{4}\b/g, '') // Phone numbers
         name = name.replace(/\b[A-Z0-9#]{10,}\b/g, '') // Transaction IDs
-        name = name.replace(/\s+/g, ' ').trim()
+        name = name.replace(/\$[\d,]+\.?\d*/g, '') // Remove any dollar amounts
+        name = name.replace(/\b\d{2}\/\d{2}\/\d{2,4}\b/g, '') // Remove any missed dates
+        name = name.replace(/\s+/g, ' ').trim() // Clean up whitespace
         
-        if (name.length > 2) {
-          parsedData.name = name
+        // Extract main merchant/description name (usually the first meaningful part)
+        const words = name.split(' ').filter(word => word.length > 1)
+        if (words.length > 0) {
+          // Take the first part that looks like a merchant name (usually first word or two)
+          const merchantName = words[0]
+          if (merchantName && merchantName.length > 2) {
+            parsedData.name = merchantName
+          }
         }
       }
       
@@ -190,22 +203,42 @@ export function ExpenseForm({ onSuccess, initialData, isEditing = false }: Expen
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true)
     try {
-      const expenseData = {
-        id: initialData?.id || Date.now().toString(),
-        name: values.name,
-        amount: values.amount,
-        category: values.category,
-        frequency: values.frequency,
-        dueDate: values.dueDate.toISOString(),
-        emoji: categories.find((c) => c.value === values.category)?.label.split(" ")[0] || "💰",
-        createdAt: initialData?.createdAt || new Date().toISOString(),
-      }
+      if (isEditing && initialData?.id) {
+        const expenseData: Expense = {
+          id: initialData.id,
+          name: values.name,
+          amount: values.amount,
+          category: values.category,
+          frequency: values.frequency,
+          dueDate: values.dueDate.toISOString(),
+          emoji: categories.find((c) => c.value === values.category)?.label.split(" ")[0] || "💰",
+          createdAt: initialData.createdAt,
+        }
 
-      if (onSuccess) {
-        onSuccess(expenseData)
-      }
+        await updateExpense(expenseData)
+        
+        if (onSuccess) {
+          onSuccess()
+        }
+      } else {
+        const expenseData: ExpenseCreate = {
+          name: values.name,
+          amount: values.amount,
+          category: values.category,
+          frequency: values.frequency,
+          dueDate: values.dueDate.toISOString(),
+          emoji: categories.find((c) => c.value === values.category)?.label.split(" ")[0] || "💰",
+          createdAt: new Date().toISOString(),
+        }
 
-      await (isEditing ? updateExpense(expenseData) : addExpense(expenseData))
+        // Save to database first
+        await addExpense(expenseData)
+
+        // Call onSuccess after successful database save
+        if (onSuccess) {
+          onSuccess()
+        }
+      }
       form.reset()
       toast({
         title: "Success",

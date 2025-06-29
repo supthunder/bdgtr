@@ -19,7 +19,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
-import { ModeToggle } from "@/components/mode-toggle"
+
 
 const sidebarNavItems = [
   {
@@ -174,9 +174,6 @@ export function DashboardLayout({ children }: { children: React.ReactNode }) {
         <div className="flex-1 flex flex-col w-full">
           <header className="flex h-14 items-center gap-4 border-b bg-background px-4 lg:px-6">
             <SidebarTrigger className="hidden md:flex" />
-            <div className="ml-auto flex items-center gap-2">
-              <ModeToggle />
-            </div>
           </header>
           <main className="flex-1 w-full p-4 lg:p-6">
             <div className="mx-auto w-full">
