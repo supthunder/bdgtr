@@ -1,218 +1,116 @@
 # 💰 bdgtr - Self-Hosted Budget Tracker
 
-A modern, privacy-focused budget tracking application built with Next.js and shadcn/ui. Track your living expenses with a beautiful dark-themed dashboard, all while keeping your data local and secure.
+A modern, privacy-focused budget tracking application built with Next.js, PostgreSQL, and shadcn/ui. Track your finances with a beautiful dashboard, comprehensive analytics, and advanced features like automated backups and smart data parsing.
 
 ![bdgtr Preview](./public/preview.png)
-*Dark-themed dashboard for tracking house-related expenses*
+*Modern dashboard with financial overview and analytics*
 
 ## 🌟 Key Features
 
-### 📊 Dashboard Overview
-- Total expenses summary
-- Monthly recurring expenses tracker
-- Upcoming expenses (next 7 days)
-- Top spending categories with visual indicators
-- Recent expenses list
-- Dark theme by default for comfortable viewing
+### 📊 Enhanced Dashboard
+- **Financial Overview Cards**: Total Income, Total Expenses, Balance, Mortgage, and Utilities tracking
+- **Interactive Monthly Distribution Chart**: 
+  - Visual income vs expenses comparison
+  - Horizontal scrolling with click-and-drag support
+  - Auto-positioning to current month context
+  - 18 months of data display
+  - Smooth scrolling with fade indicators
+- **Top Categories**: Budget tracking with progress bars and emoji indicators
+- **Recent Transactions**: Quick overview of latest financial activity
+- **Dark theme** optimized for comfortable viewing
 
-### 💳 Expense Tracking
-- Add and manage expenses with:
-  - 📝 Name and amount
-  - 🏷️ Category with emoji (e.g., "🏠 Rent/Mortgage", "🪑 Furniture")
+### 💳 Smart Transaction Management
+- **Add Income & Expenses** with comprehensive details:
+  - 📝 Name, amount, and description
+  - 🏷️ Category with emoji indicators
   - 🔄 Frequency options (one-time, daily, weekly, monthly, etc.)
-  - 📅 Date tracking (when expenses occurred)
+  - 📅 Date tracking
+- **Intelligent Paste Functionality**:
+  - Smart parsing of bank/credit card statements
+  - Automatic extraction of date, amount, and description
+  - Cleans up transaction IDs and phone numbers
+  - Auto-fills form fields for quick entry
+- **Optimistic Updates**: Real-time UI updates for better user experience
 
-### 📈 Reports & Analytics
-- **Detailed Reports View**
-  - Tabular view of all expenses
-  - Sort by amount, date, or category
+### 🔄 Automated Backup System
+- **Daily Automated Backups**: 
+  - Automatic backup creation on dashboard load
+  - Smart daily checking to avoid duplicates
+- **Multiple Formats**:
+  - **CSV files**: Excel-compatible for spreadsheet analysis
+  - **SQL files**: Complete database backups for restoration
+- **Backup Management Interface**:
+  - View all backups with creation dates
+  - Import/restore functionality
+  - Compact, scrollable dialog for all screen sizes
+- **Data stored in**: `backup data/` folder (git-ignored for privacy)
+
+### 📈 Advanced Reports & Analytics
+- **Comprehensive Reports View**:
+  - Tabular view of all transactions
+  - Advanced sorting by amount, date, category, or type
   - Search across all fields
-- **Export Options**
-  - Export to CSV for spreadsheet analysis
-  - Generate PDF reports with formatting
-  - Include category emojis in exports
+  - Filter by income/expense type
+- **Export Options**:
+  - Export filtered data to CSV
+  - Generate formatted PDF reports
+  - Include category emojis and full transaction details
 
-### 🏠 House-Related Categories
-- Specialized categories for home expenses:
-  - 🏠 Rent/Mortgage
-  - 🔌 Utilities
-  - 🌐 Internet/Cable
-  - 🪑 Furniture
-  - 🛋️ Home Decor
-  - 🧰 Appliances
-  - 🧹 Cleaning Supplies
-  - 🛠️ Home Maintenance
-  - 🏡 Home Insurance
-  - 🚰 Plumbing
-  - ⚡ Electrical
-  - ❄️ HVAC
-  - 🏺 Kitchen Items
-  - 🛁 Bathroom Items
-  - 🌿 Landscaping
-  - 📦 Storage/Moving
-  - 💰 Other Housing
+### 🏠 Specialized Categories
+Pre-configured categories for comprehensive expense tracking:
+- 🏠 Rent/Mortgage
+- 🔌 Utilities  
+- 🌐 Internet/Cable
+- 🪑 Furniture
+- 🛋️ Home Decor
+- 🧰 Appliances
+- 🧹 Cleaning Supplies
+- 🛠️ Home Maintenance
+- 🏡 Home Insurance
+- 🚗 Transportation
+- 🍔 Food & Dining
+- 💰 And many more...
 
-### 🔒 Privacy-First
-- **100% Local Storage**: All data stays in your browser
-- **No Server Required**: Works completely offline
-- **Self-Contained**: No external dependencies for data storage
-- **Private**: Your financial data never leaves your device
-
-### 📱 Responsive Design
-- Works seamlessly on desktop and mobile
-- Adaptive sidebar for different screen sizes
-- Clean, modern interface
+### 🔒 Privacy & Security
+- **Self-Hosted**: Complete control over your data
+- **Local Database**: PostgreSQL running on your machine
+- **No External Dependencies**: All data processing happens locally
+- **Automated Backups**: Regular data protection
+- **Git-Ignored Sensitive Data**: Backup folder excluded from version control
 
 ## 🛠️ Technology Stack
 
-- **Framework**: Next.js with App Router
+- **Framework**: Next.js 15 with App Router
+- **Database**: PostgreSQL with Prisma ORM
 - **UI Components**: shadcn/ui
 - **Styling**: Tailwind CSS
-- **State Management**: React Hooks
-- **Data Storage**: Browser Local Storage
+- **Charts**: Recharts for data visualization
 - **Type Safety**: TypeScript
-- **Export Formats**: CSV, PDF (using jsPDF)
+- **Package Manager**: pnpm
+- **Export Formats**: CSV, PDF, SQL
 
 ## 🚀 Getting Started
 
-1. Clone the repository:
-```bash
-git clone https://github.com/supthunder/bdgtr.git
-cd bdgtr
-```
+### Prerequisites
 
-2. Install dependencies:
-```bash
-pnpm install
-```
-
-3. Run the development server:
-```bash
-pnpm dev
-```
-
-4. Open [http://localhost:3000](http://localhost:3000) in your browser
-
-## 📱 Usage
-
-1. **Adding Expenses**
-   - Click "Add Expense" button
-   - Fill in expense details (name, amount, category)
-   - Select frequency and occurrence date
-   - Submit to save
-
-2. **Viewing Analytics**
-   - See total expenses on the dashboard
-   - View categorized spending
-   - Track upcoming payments
-   - Monitor recurring expenses
-
-3. **Generating Reports**
-   - Navigate to Reports page
-   - Use search and filters to find specific expenses
-   - Sort data by clicking column headers
-   - Export filtered data to CSV or PDF
-
-## 🔐 Data Privacy
-
-All data is stored locally in your browser's localStorage. This means:
-- No data is ever sent to any servers
-- Your financial information remains completely private
-- Data persists between sessions
-- You can clear data any time using browser settings
-
-## 🤝 Contributing
-
-Contributions are welcome! Feel free to:
-- Report bugs
-- Suggest features
-- Submit pull requests
-
-## 📄 License
-
-MIT License - feel free to use this project for personal or commercial purposes. 
-
-# Budget Planner
-
-A modern budget planning application built with Next.js, PostgreSQL, and Prisma.
-
-## 🎉 Recent Updates
-
-### Dashboard Improvements (Latest)
-- ✨ Added real-time updates for transactions
-- 📊 New Monthly Distribution chart showing income vs expenses
-- 💹 Enhanced Top Categories visualization with:
-  - Progress bars for budget tracking
-  - Emoji indicators for categories
-  - Budget limit indicators
-- 🔄 Optimistic updates for better UX
-- 🎯 Fixed issues with:
-  - Real-time data updates
-  - Form state management
-  - Duplicate buttons
-  - Static route handling
-
-### Visual Enhancements
-- 📈 New stacked bar chart showing monthly profit/loss
-- 🎨 Color-coded visualizations:
-  - Green for profit/income
-  - Red for expenses
-- 📱 Improved responsive layout
-- ✨ Added loading states and toast notifications
-
-### Technical Improvements
-- 🚀 Dynamic route handling with `dynamic = 'force-dynamic'`
-- 🔄 Proper path revalidation
-- 💾 Enhanced data fetching with proper date handling
-- 🎯 Optimized database queries
-- 🛠️ Improved error handling with rollback functionality
-
-## Features
-
-- 💰 Track both income and expenses
-- 📊 Comprehensive dashboard with financial overview
-- 📅 Handle recurring and one-time transactions
-- 📱 Responsive design for all devices
-- 📤 Export data to CSV or PDF
-- 🔍 Advanced sorting and filtering
-- 🎨 Modern UI with dark mode support
-
-## Tech Stack
-
-- **Framework**: Next.js 14
-- **Database**: PostgreSQL
-- **ORM**: Prisma
-- **Styling**: Tailwind CSS
-- **UI Components**: shadcn/ui
-- **Package Manager**: pnpm
-- **Language**: TypeScript
-- **Charts**: Recharts
-
-## Prerequisites
-
-- Node.js 18+ 
+- Node.js 18+
 - PostgreSQL 12+
 - pnpm
 
-## Getting Started
+### Installation
 
 1. **Clone the repository**
-
 ```bash
 git clone <your-repo-url>
-cd planner
+cd bdgtr
 ```
 
 2. **Install dependencies**
-
 ```bash
 pnpm install
 ```
 
 3. **Set up PostgreSQL**
-
-Make sure PostgreSQL is running on your system. Then:
-
 ```bash
 # Login to PostgreSQL
 sudo -u postgres psql
@@ -231,40 +129,98 @@ GRANT ALL PRIVILEGES ON DATABASE planner_db TO "user";
 \q
 ```
 
-4. **Set up environment variables**
+4. **Configure environment variables**
 
 Create a `.env` file in the root directory:
-
 ```env
 DATABASE_URL="postgresql://user:password@localhost:5432/planner_db?schema=public"
 ```
 
 5. **Initialize the database**
-
 ```bash
 pnpm prisma generate
 pnpm prisma db push
 ```
 
 6. **Run the development server**
-
 ```bash
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to view the application.
+Open [http://localhost:3000](http://localhost:3000) to start tracking your finances!
 
-## Development Tools
+## 📱 Usage Guide
 
-- **Prisma Studio**: View and edit your data
+### Adding Transactions
+1. **Quick Entry**: Click "Add Income" or "Add Expense"
+2. **Smart Paste**: Use the "Paste" button to parse bank statement data
+3. **Form Fields**: Fill in name, amount, category, frequency, and date
+4. **Submit**: Transaction appears immediately with optimistic updates
+
+### Using the Paste Feature
+The paste functionality can intelligently parse bank/credit card statements. Example format:
+```
+06/01/25	06/01/25	SHOPMYEXCHANGE.COM 800-527-2345 TX#24138294R3HLSTEEF	$1,422.55
+```
+The parser will extract:
+- **Date**: 06/01/25
+- **Amount**: $1,422.55  
+- **Description**: SHOPMYEXCHANGE.COM (cleaned of phone numbers and transaction IDs)
+
+### Managing Backups
+1. **Automatic**: Backups are created daily when you visit the dashboard
+2. **Manual**: Use the backup dialog to create immediate backups
+3. **Restore**: Import previous backups to restore data
+4. **View**: See all backups with creation timestamps
+
+### Viewing Analytics
+1. **Dashboard**: Get an overview of your financial health
+2. **Monthly Chart**: Scroll through 18 months of income vs expense data
+3. **Categories**: Track spending by category with visual progress indicators
+4. **Reports**: Detailed analysis with sorting, filtering, and export options
+
+## 🎉 Recent Updates
+
+### Latest Improvements
+- ✨ **New Dashboard Cards**: Added Mortgage and Utilities tracking cards
+- 📊 **Enhanced Monthly Chart**: Horizontal scrolling, auto-positioning, and smooth animations
+- 📋 **Smart Paste Feature**: Intelligent parsing of bank statement data
+- 💾 **Automated Backup System**: Daily backups with CSV and SQL formats
+- 🎨 **UI Refinements**: Changed "Due Date" to "Date" for simplicity
+- 🔄 **Optimistic Updates**: Real-time UI responses for better UX
+
+### Chart Improvements
+- Fixed CSS color variables with proper hex colors
+- Added click-and-drag horizontal scrolling
+- Intelligent positioning to show current month context
+- Fade indicators for scroll boundaries
+- Hidden scrollbars for clean interface
+
+### Technical Enhancements
+- 🚀 Dynamic route handling with proper revalidation
+- 💾 Enhanced data fetching and caching
+- 🛠️ Improved error handling with rollback functionality
+- 🎯 Optimized database queries and performance
+
+## 🛠️ Development Tools
+
+- **Prisma Studio**: Visual database editor
   ```bash
   pnpm prisma studio
   ```
+- **Database Reset**: Reset database schema
+  ```bash
+  pnpm prisma db push --force-reset
+  ```
 
-## Contributing
+## 🤝 Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+Contributions are welcome! Feel free to:
+- 🐛 Report bugs
+- 💡 Suggest features  
+- 🔧 Submit pull requests
+- 📚 Improve documentation
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details 
+MIT License - feel free to use this project for personal or commercial purposes. 
